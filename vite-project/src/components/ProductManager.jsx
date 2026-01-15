@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
-import { Pencil, Trash2, Plus } from 'lucide-react';
+import { Pencil, Trash2, Plus, Search } from 'lucide-react';
 import '../index.css';
 
 export function ProductManager({ products, addProduct, updateProduct, deleteProduct }) {
   const [name, setName] = useState('');
   const [price, setPrice] = useState('');
   const [stock, setStock] = useState('');
+  const [search, setSearch] = useState('');
   const [editingId, setEditingId] = useState(null);
 
   const handleSubmit = (e) => {
@@ -44,11 +45,16 @@ export function ProductManager({ products, addProduct, updateProduct, deleteProd
     setStock('');
   };
 
+  const filteredProducts = products.filter((product) =>
+    product.name.toLowerCase().includes(search.toLowerCase())
+  );
+
   return (
     <div className="card">
       <div className="card-header">
         <h2 className="card-title">Product Management</h2>
       </div>
+
       <div className="card-content">
         <form onSubmit={handleSubmit} className="product-form">
           <div className="form-group">
@@ -61,6 +67,7 @@ export function ProductManager({ products, addProduct, updateProduct, deleteProd
               required
             />
           </div>
+
           <div className="grid-2 gap-4">
             <div className="form-group">
               <label>Price ($)</label>
@@ -74,6 +81,7 @@ export function ProductManager({ products, addProduct, updateProduct, deleteProd
                 required
               />
             </div>
+
             <div className="form-group">
               <label>Stock</label>
               <input
@@ -86,6 +94,22 @@ export function ProductManager({ products, addProduct, updateProduct, deleteProd
               />
             </div>
           </div>
+
+          {/* 🔍 SEARCH INPUT */}
+          <div className="form-group">
+            <label>Search Products</label>
+            <div className="search-input">
+              <Search className="icon" />
+              <input
+                className="input"
+                type="text"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search by product name..."
+              />
+            </div>
+          </div>
+
           <div className="form-actions">
             <button type="submit" className="btn btn-primary">
               {editingId ? (
@@ -100,36 +124,51 @@ export function ProductManager({ products, addProduct, updateProduct, deleteProd
                 </>
               )}
             </button>
+
             {editingId && (
-              <button type="button" className="btn btn-outline" onClick={handleCancel}>
+              <button
+                type="button"
+                className="btn btn-outline"
+                onClick={handleCancel}
+              >
                 Cancel
               </button>
             )}
           </div>
         </form>
 
+        {/* 📦 PRODUCT LIST */}
         <div className="product-list">
-          {products.map((product) => (
-            <div key={product.id} className="product-item">
-              <div className="product-info">
-                <p className="product-name">{product.name}</p>
-                <p className="product-details">
-                  ${product.price.toFixed(2)} · Stock: {product.stock}
-                </p>
+          {filteredProducts.length === 0 ? (
+            <p className="empty-text">No products found.</p>
+          ) : (
+            filteredProducts.map((product) => (
+              <div key={product.id} className="product-item">
+                <div className="product-info">
+                  <p className="product-name">{product.name}</p>
+                  <p className="product-details">
+                    ${product.price.toFixed(2)} · Stock: {product.stock}
+                  </p>
+                </div>
+
+                <div className="product-actions">
+                  <button
+                    className="btn btn-outline btn-small"
+                    onClick={() => handleEdit(product)}
+                  >
+                    <Pencil className="icon" />
+                  </button>
+
+                  <button
+                    className="btn btn-outline btn-small btn-danger"
+                    onClick={() => deleteProduct(product.id)}
+                  >
+                    <Trash2 className="icon" />
+                  </button>
+                </div>
               </div>
-              <div className="product-actions">
-                <button className="btn btn-outline btn-small" onClick={() => handleEdit(product)}>
-                  <Pencil className="icon" />
-                </button>
-                <button
-                  className="btn btn-outline btn-small btn-danger"
-                  onClick={() => deleteProduct(product.id)}
-                >
-                  <Trash2 className="icon" />
-                </button>
-              </div>
-            </div>
-          ))}
+            ))
+          )}
         </div>
       </div>
     </div>

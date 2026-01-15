@@ -1,5 +1,9 @@
 import { useState } from "react";
 import { Clock, CheckCircle, XCircle, Plus } from "lucide-react";
+import { Search } from "lucide-react";
+
+
+
 import "../index.css";
 
 export function PendingSales({
@@ -13,8 +17,14 @@ export function PendingSales({
   const [quantity, setQuantity] = useState("1");
   const [customerName, setCustomerName] = useState("");
   const [notes, setNotes] = useState("");
+  const [productSearch, setProductSearch] = useState(""); // 🔹 Search term
 
   const selectedProduct = products.find(p => p.id === selectedProductId);
+
+  // Filter products based on search
+  const filteredProducts = products.filter((p) =>
+    p.name.toLowerCase().includes(productSearch.toLowerCase())
+  );
 
   const handleHoldOrder = (e) => {
     e.preventDefault();
@@ -26,7 +36,6 @@ export function PendingSales({
     const product = products.find(p => p.id === selectedProductId);
     if (!product) return;
 
-    // 🔹 Create new pending order object
     onHoldOrder({
       id: Date.now().toString(),
       productId: product.id,
@@ -35,7 +44,7 @@ export function PendingSales({
       totalAmount: product.price * qty,
       customerName,
       notes: notes || undefined,
-      createdAt: new Date(),
+      createdAt: new Date().toISOString(),
       paid: 0,
       balance: product.price * qty,
       status: "PENDING"
@@ -46,35 +55,51 @@ export function PendingSales({
     setQuantity("1");
     setCustomerName("");
     setNotes("");
+    setProductSearch(""); // reset search
   };
 
   return (
     <div className="card">
       <div className="card-header">
         <h2 className="card-title">
-          <Clock size={18} />
-          Pending Orders
+          <Clock size={18} /> Pending Orders
         </h2>
       </div>
 
       <div className="card-content">
-
-        {/* FORM */}
+        {/* ===================== FORM ===================== */}
         <form className="order-form" onSubmit={handleHoldOrder}>
           <h3>Hold New Order</h3>
 
-          <label>Product</label>
-          <select
-            value={selectedProductId}
-            onChange={(e) => setSelectedProductId(e.target.value)}
-          >
-            <option value="">Choose a product</option>
-            {products.map(p => (
-              <option key={p.id} value={p.id}>
-                {p.name} - ${p.price} (Stock: {p.stock})
-              </option>
-            ))}
-          </select>
+          <div className="search-container">
+  <Search size={18} className="search-icon" />
+  <input
+    type="text"
+    placeholder="Search products..."
+    value={productSearch}
+    onChange={(e) => setProductSearch(e.target.value)}
+  />
+</div>
+
+{/* 🔹 SEARCH RESULTS */}
+{productSearch && filteredProducts.length > 0 && (
+  <ul className="search-results">
+    {filteredProducts.map((p) => (
+      <li
+        key={p.id}
+        className={p.id === selectedProductId ? "selected" : ""}
+        onClick={() => {
+          setSelectedProductId(p.id);
+          setProductSearch(p.name); // show product name in search box
+        }}
+      >
+        {p.name} - ${p.price.toFixed(2)} (Stock: {p.stock})
+      </li>
+    ))}
+  </ul>
+)}
+
+
 
           <label>Quantity</label>
           <input
@@ -110,13 +135,12 @@ export function PendingSales({
           )}
 
           <button className="btn primary" type="submit">
-            <Plus size={16} />
-            Hold Order
+            <Plus size={16} /> Hold Order
           </button>
         </form>
 
-        {/* LIST */}
-        <div className="orders-list">
+        {/* ===================== PENDING ORDERS ===================== */}
+        <div className="orders-list" style={{ marginTop: "1rem" }}>
           <div className="list-header">
             <h3>Held Orders</h3>
             <span className="badge">{pendingOrders.length}</span>
@@ -125,8 +149,8 @@ export function PendingSales({
           {pendingOrders.length === 0 ? (
             <p className="empty">No pending orders</p>
           ) : (
-            pendingOrders.map(order => {
-              const product = products.find(p => p.id === order.productId);
+            pendingOrders.map((order) => {
+              const product = products.find((p) => p.id === order.productId);
               const hasStock = product && product.stock >= order.quantity;
 
               return (
@@ -147,7 +171,9 @@ export function PendingSales({
 
                     <div className="amount">
                       <p>${order.totalAmount.toFixed(2)}</p>
-                      {!hasStock && <span className="badge danger">Low Stock</span>}
+                      {!hasStock && (
+                        <span className="badge danger">Low Stock</span>
+                      )}
                     </div>
                   </div>
 
@@ -157,16 +183,14 @@ export function PendingSales({
                       disabled={!hasStock}
                       onClick={() => onCompleteOrder(order.id)}
                     >
-                      <CheckCircle size={16} />
-                      Complete
+                      <CheckCircle size={16} /> Complete
                     </button>
 
                     <button
                       className="btn danger"
                       onClick={() => onCancelOrder(order.id)}
                     >
-                      <XCircle size={16} />
-                      Cancel
+                      <XCircle size={16} /> Cancel
                     </button>
                   </div>
                 </div>

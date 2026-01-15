@@ -126,8 +126,8 @@
 }
 
 .low-stock-alert {
-  background-color: #fef2f2;
-  border: 1px solid #fecaca;
+  background-color: #fed1d1;
+  border: 1px solid #ffb4b4;
   border-radius: 8px;
   padding: 12px;
 }
@@ -171,7 +171,7 @@
 }
 
 .product-item.low-stock {
-  background-color: #fef2f2;
+  background-color: #f9d9d9;
   border-color: #fecaca;
 }
 
@@ -187,27 +187,27 @@
 }
 
 .product-name.alert-text {
-  color: #991b1b;
+  color: #c50606;
 }
 
 .product-details {
   margin: 0;
   font-size: 0.875rem;
-  color: #4b5563;
+  color: #f60b0b;
 }
 
 .badge {
-  background-color: #f87171;
-  color: #fff;
+  background-color: #ec1313;
+  color: #7676fb;
   font-size: 0.75rem;
   padding: 2px 8px;
   border-radius: 9999px;
   font-weight: 500;
 }
 .card {
-  background-color: #fff;
+  background-color: #f90707;
   border-radius: 12px;
-  border: 1px solid #e5e7eb;
+  border: 1px solid #f91605;
   padding: 16px;
   box-shadow: 0 2px 8px rgba(0,0,0,0.1);
 }
@@ -829,4 +829,252 @@
 .empty {
   text-align: center;
   color: #9ca3af;
+}
+
+.search-results {
+  border: 1px solid #ccc;
+  max-height: 150px;
+  overflow-y: auto;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.search-results li {
+  padding: 0.5rem;
+  cursor: pointer;
+}
+
+.search-results li:hover,
+.search-results li.selected {
+  background-color: #f0f0f0;
+}
+
+/* ADMIN CONTROLS */
+.dashboard-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.admin-badge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background-color: #1e5bff;
+  color: #fff;
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+/* ROLE SWITCH BUTTON */
+.role-btn {
+  background: #ffffff;
+  border: 1px solid #ddd;
+  padding: 8px 14px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.role-btn:hover {
+  background: #f5f7ff;
+  border-color: #1e5bff;
+  color: #1e5bff;
+}
+
+/* Center login */
+.login-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  background: #f4f6f8;
+}
+
+/* Login card */
+.login-box {
+  background: white;
+  padding: 30px;
+  width: 320px;
+  border-radius: 8px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+}
+
+.login-box h2 {
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+/* Input */
+.login-box input {
+  width: 100%;
+  padding: 10px;
+  margin-bottom: 15px;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+}
+
+/* Button */
+.login-box button {
+  width: 100%;
+  padding: 10px;
+  background: #2563eb;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.login-box button:hover {
+  background: #1e40af;
+}
+
+/* Error */
+.error {
+  color: red;
+  font-size: 14px;
+  margin-bottom: 10px;
+}
+
+/* Access denied */
+.access-denied {
+  text-align: center;
+  margin-top: 100px;
+  color: red;
+}
+
+/* ==========================
+   PASSWORD MODAL OVERLAY
+========================== */
+.password-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.6); /* semi-transparent background */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000; /* above all other elements */
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+/* ==========================
+   PASSWORD MODAL BOX
+========================== */
+.password-modal {
+  background: #fff;
+  padding: 2rem;
+  border-radius: 12px;
+  width: 320px;
+  max-width: 90%;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+  text-align: center;
+  animation: slideDown 0.3s ease-in-out;
+}
+
+.password-modal h3 {
+  margin-bottom: 1rem;
+  font-size: 1.25rem;
+  color: #111;
+}
+
+.password-modal input {
+  width: 100%;
+  padding: 0.6rem 0.8rem;
+  border-radius: 8px;
+  border: 1px solid #ccc;
+  margin-bottom: 1rem;
+  font-size: 1rem;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.password-modal input:focus {
+  border-color: #4f46e5; /* purple focus */
+  box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.2);
+}
+
+/* ==========================
+   PASSWORD BUTTONS
+========================== */
+.password-actions {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.password-actions button {
+  flex: 1;
+  padding: 0.6rem;
+  border: none;
+  border-radius: 8px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.password-actions button:first-child {
+  background-color: #4f46e5; /* Login button */
+  color: #fff;
+}
+
+.password-actions button:first-child:hover {
+  background-color: #4338ca;
+}
+
+.password-actions button:last-child {
+  background-color: #e5e7eb; /* Cancel button */
+  color: #111;
+}
+
+.password-actions button:last-child:hover {
+  background-color: #d1d5db;
+}
+
+/* ==========================
+   ANIMATIONS
+========================== */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideDown {
+  from { transform: translateY(-20px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+/* Search input + icon */
+.search-container {
+  position: relative;
+  display: flex;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.search-container input {
+  width: 100%;
+  padding: 0.5rem 0.5rem 0.5rem 2rem; /* padding-left for icon */
+  border-radius: 6px;
+  border: 1px solid #ccc;
+  outline: none;
+}
+
+.search-container input:focus {
+  border-color: #4f46e5;
+  box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.2);
+}
+
+.search-icon {
+  position: absolute;
+  left: 8px;
+  color: #888;
+  pointer-events: none; /* icon won't block input clicks */
 }
