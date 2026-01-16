@@ -1,0 +1,21 @@
+{
+  "name": "Gadget Source POS",
+  "short_name": "POS Gadget",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#0d47a1",
+  "description": "POS Gadget web app",
+  "icons": [
+    {
+      "src": "/icons/icon 1.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/icons/icon2.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
