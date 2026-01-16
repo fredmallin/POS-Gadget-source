@@ -187,11 +187,15 @@ export default function Dashboard() {
 
       {/* ADMIN-ONLY SECTIONS */}
       {isAdmin && (
-        <div className="dashboard-grid">
+          <div className="dashboard-grid">
           <InventoryMonitor products={products} />
-          <ReportsAnalytics products={products} sales={sales} />
-        </div>
-      )}
+          <ReportsAnalytics
+           products={products}
+           sales={sales}
+           setSales={setSales}   
+        />
+      </div>
+    )}
 
       {/* SHARED SECTION */}
       <div className="dashboard-grid">

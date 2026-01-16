@@ -1,19 +1,39 @@
-import React, { useMemo } from "react";
-import { TrendingUp, TrendingDown, DollarSign } from "lucide-react";
+import React, { useMemo, useState } from "react";
+import {
+  TrendingUp,
+  TrendingDown,
+  DollarSign,
+  Trash2,
+  Clock
+} from "lucide-react";
 import "../index.css";
 
-export function ReportsAnalytics({ products, sales }) {
+export function ReportsAnalytics({ products, sales, setSales }) {
+  const [showConfirm, setShowConfirm] = useState(false);
+
+  /* =========================
+     CLEAR ALL DATA
+  ========================== */
+  const clearAllData = () => {
+    localStorage.removeItem("sales");
+    setSales([]);
+    setShowConfirm(false);
+  };
+
+  /* =========================
+     ANALYTICS
+  ========================== */
   const analytics = useMemo(() => {
-    /* =========================
-       ONLY COMPLETED SALES
-    ========================== */
     const completedSales = sales.filter(
       (sale) => sale.status === "COMPLETED"
     );
 
-    /* =========================
-       SALES PER PRODUCT
-    ========================== */
+    /* SOLD GOODS (each sale entry) */
+    const soldGoods = completedSales
+      .slice()
+      .reverse(); // newest first
+
+    /* SALES PER PRODUCT */
     const salesByProduct = completedSales.reduce((acc, sale) => {
       if (!acc[sale.productId]) {
         acc[sale.productId] = {
@@ -25,7 +45,6 @@ export function ReportsAnalytics({ products, sales }) {
 
       acc[sale.productId].quantitySold += sale.quantity;
       acc[sale.productId].revenue += sale.totalAmount;
-
       return acc;
     }, {});
 
@@ -36,9 +55,6 @@ export function ReportsAnalytics({ products, sales }) {
       })
     );
 
-    /* =========================
-       SORTING
-    ========================== */
     salesArray.sort((a, b) => b.quantitySold - a.quantitySold);
 
     const mostSold = salesArray.slice(0, 5);
@@ -47,9 +63,6 @@ export function ReportsAnalytics({ products, sales }) {
         ? salesArray.slice(-5).reverse()
         : [];
 
-    /* =========================
-       TOTALS
-    ========================== */
     const totalRevenue = completedSales.reduce(
       (sum, sale) => sum + sale.totalAmount,
       0
@@ -61,6 +74,7 @@ export function ReportsAnalytics({ products, sales }) {
     );
 
     return {
+      soldGoods,
       mostSold,
       leastSold,
       totalRevenue,
@@ -69,114 +83,158 @@ export function ReportsAnalytics({ products, sales }) {
     };
   }, [sales]);
 
+  /* =========================
+     DATE FORMATTER
+  ========================== */
+  const formatDate = (date) =>
+    new Date(date).toLocaleString("en-US", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit"
+    });
+
   return (
     <div className="card">
-      <div className="card-header">
+      {/* HEADER */}
+      <div className="card-header report-header">
         <h2 className="card-title">Reports & Analytics</h2>
+        <button className="clear-btn" onClick={() => setShowConfirm(true)}>
+          <Trash2 size={16} /> Clear Data
+        </button>
       </div>
 
+      {/* CONFIRM */}
+      {showConfirm && (
+        <div className="confirm-overlay">
+          <div className="confirm-box">
+            <h3>Clear All Sales Data?</h3>
+            <p>This action cannot be undone.</p>
+
+            <div className="confirm-actions">
+              <button
+                className="btn cancel"
+                onClick={() => setShowConfirm(false)}
+              >
+                Cancel
+              </button>
+              <button className="btn danger" onClick={clearAllData}>
+                Clear Data
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* CONTENT */}
       <div className="card-content">
+        {/* STATS */}
         <div className="grid-2 gap-4 mb-6">
           <div className="stat-box total-revenue">
-            <div className="stat-header">
-              <DollarSign className="icon stat-icon" />
-              <p>Total Revenue</p>
-            </div>
+            <DollarSign className="icon stat-icon" />
+            <p>Total Revenue</p>
             <p className="stat-value">
               ${analytics.totalRevenue.toFixed(2)}
             </p>
           </div>
 
           <div className="stat-box total-items">
-            <div className="stat-header">
-              <TrendingUp className="icon stat-icon" />
-              <p>Items Sold</p>
-            </div>
-            <p className="stat-value">
-              {analytics.totalItemsSold}
-            </p>
+            <TrendingUp className="icon stat-icon" />
+            <p>Items Sold</p>
+            <p className="stat-value">{analytics.totalItemsSold}</p>
           </div>
         </div>
 
-        <div className="analytics-list">
-          {analytics.hasSales ? (
-            <>
-              {analytics.mostSold.length > 0 && (
-                <div className="analytics-section">
-                  <div className="section-header">
-                    <TrendingUp className="icon trending-up" />
-                    <h3>Most Sold Products (Top 5)</h3>
-                  </div>
+        {!analytics.hasSales ? (
+          <div className="no-sales">
+            <TrendingUp className="icon no-sales-icon" />
+            <p>No completed sales yet</p>
+            <p className="text-muted">
+              Pending orders are not counted as sales
+            </p>
+          </div>
+        ) : (
+          <>
+            {/* SOLD GOODS */}
+            <div className="analytics-section">
+              <div className="section-header">
+                <Clock className="icon" />
+                <h3>Sold Goods</h3>
+              </div>
 
-                  {analytics.mostSold.map((item, index) => (
-                    <div
-                      key={item.productId}
-                      className="analytics-item most-sold"
-                    >
-                      <div className="analytics-item-info">
-                        <div className="rank-badge">
-                          {index + 1}
-                        </div>
-                        <div>
-                          <p className="product-name">
-                            {item.productName}
-                          </p>
-                          <p className="product-details">
-                            Sold: {item.quantitySold} units
-                          </p>
-                        </div>
-                      </div>
-                      <p className="product-value">
-                        ${item.revenue.toFixed(2)}
+              <div className="sold-goods-list scrollable">
+                {analytics.soldGoods.map((sale, index) => (
+                  <div key={index} className="analytics-item">
+                    <div>
+                      <p className="product-name">
+                        {sale.productName}
+                      </p>
+                      <p className="product-details">
+                        Qty: {sale.quantity} ·{" "}
+                        {formatDate(sale.createdAt)}
                       </p>
                     </div>
-                  ))}
-                </div>
-              )}
-
-              {analytics.leastSold.length > 0 && (
-                <div className="analytics-section">
-                  <div className="section-header">
-                    <TrendingDown className="icon trending-down" />
-                    <h3>Least Sold Products</h3>
+                    <p className="product-value">
+                      ${sale.totalAmount.toFixed(2)}
+                    </p>
                   </div>
-
-                  {analytics.leastSold.map((item, index) => (
-                    <div
-                      key={item.productId}
-                      className="analytics-item least-sold"
-                    >
-                      <div className="analytics-item-info">
-                        <div className="rank-badge least">
-                          {index + 1}
-                        </div>
-                        <div>
-                          <p className="product-name least">
-                            {item.productName}
-                          </p>
-                          <p className="product-details">
-                            Sold: {item.quantitySold} units
-                          </p>
-                        </div>
-                      </div>
-                      <p className="product-value least">
-                        ${item.revenue.toFixed(2)}
-                      </p>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </>
-          ) : (
-            <div className="no-sales">
-              <TrendingUp className="icon no-sales-icon" />
-              <p>No completed sales yet</p>
-              <p className="text-muted">
-                Pending orders are not counted as sales
-              </p>
+                ))}
+              </div>
             </div>
-          )}
-        </div>
+
+            {/* MOST SOLD */}
+            {analytics.mostSold.length > 0 && (
+              <div className="analytics-section">
+                <div className="section-header">
+                  <TrendingUp className="icon trending-up" />
+                  <h3>Most Sold Products</h3>
+                </div>
+
+                {analytics.mostSold.map((item, index) => (
+                  <div key={item.productId} className="analytics-item most-sold">
+                    <div>
+                      <p className="product-name">{item.productName}</p>
+                      <p className="product-details">
+                        Sold: {item.quantitySold} units
+                      </p>
+                    </div>
+                    <p className="product-value">
+                      ${item.revenue.toFixed(2)}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* LEAST SOLD */}
+            {analytics.leastSold.length > 0 && (
+              <div className="analytics-section">
+                <div className="section-header">
+                  <TrendingDown className="icon trending-down" />
+                  <h3>Least Sold Products</h3>
+                </div>
+
+                {analytics.leastSold.map((item) => (
+                  <div
+                    key={item.productId}
+                    className="analytics-item least-sold"
+                  >
+                    <div>
+                      <p className="product-name">{item.productName}</p>
+                      <p className="product-details">
+                        Sold: {item.quantitySold} units
+                      </p>
+                    </div>
+                    <p className="product-value">
+                      ${item.revenue.toFixed(2)}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </>
+        )}
       </div>
     </div>
   );
