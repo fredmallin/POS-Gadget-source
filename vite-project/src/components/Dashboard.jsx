@@ -76,22 +76,30 @@ export default function Dashboard() {
     setProducts(products.filter((p) => p.id !== id));
   };
 
-  /* =======================
-     DIRECT SALE (COMPLETED)
-  ======================== */
   const sellProduct = (productId, quantity) => {
-    const product = products.find((p) => p.id === productId);
+  setProducts(prevProducts => {
+    const product = prevProducts.find(p => p.id === productId);
+
     if (!product || product.stock < quantity) {
       alert("Insufficient stock!");
-      return;
+      return prevProducts;
     }
 
-    updateProduct(productId, { stock: product.stock - quantity });
+    return prevProducts.map(p =>
+      p.id === productId
+        ? { ...p, stock: p.stock - quantity }
+        : p
+    );
+  });
 
-    setSales([
-      ...sales,
+  setSales(prevSales => {
+    const product = products.find(p => p.id === productId);
+    if (!product) return prevSales;
+
+    return [
+      ...prevSales,
       {
-        id: Date.now().toString(),
+        id: Date.now().toString() + Math.random(),
         productId,
         productName: product.name,
         quantity,
@@ -99,8 +107,10 @@ export default function Dashboard() {
         createdAt: new Date().toISOString(),
         status: "COMPLETED",
       },
-    ]);
-  };
+    ];
+  });
+};
+
 
   /* =======================
      HOLD PENDING ORDER
