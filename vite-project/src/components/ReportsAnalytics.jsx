@@ -1,11 +1,5 @@
 import React, { useMemo, useState } from "react";
-import {
-  TrendingUp,
-  TrendingDown,
-  DollarSign,
-  Trash2,
-  Clock
-} from "lucide-react";
+import { TrendingUp, TrendingDown, DollarSign, Trash2, Clock } from "lucide-react";
 import "../index.css";
 
 export function ReportsAnalytics({ products, sales, setSales }) {
@@ -24,54 +18,38 @@ export function ReportsAnalytics({ products, sales, setSales }) {
      ANALYTICS
   ========================== */
   const analytics = useMemo(() => {
-    const completedSales = sales.filter(
-      (sale) => sale.status === "COMPLETED"
-    );
+    const completedSales = sales.filter((sale) => sale.status === "COMPLETED");
 
     /* SOLD GOODS (each sale entry) */
-    const soldGoods = completedSales
-      .slice()
-      .reverse(); // newest first
+    const soldGoods = completedSales.slice().reverse(); // newest first
 
     /* SALES PER PRODUCT */
     const salesByProduct = completedSales.reduce((acc, sale) => {
       if (!acc[sale.productId]) {
         acc[sale.productId] = {
-          productName: sale.productName,
+          productName: sale.productName || "Unknown",
           quantitySold: 0,
-          revenue: 0
+          revenue: 0,
         };
       }
 
-      acc[sale.productId].quantitySold += sale.quantity;
-      acc[sale.productId].revenue += sale.totalAmount;
+      acc[sale.productId].quantitySold += sale.quantity ?? 0;
+      acc[sale.productId].revenue += sale.totalAmount ?? 0;
       return acc;
     }, {});
 
-    const salesArray = Object.entries(salesByProduct).map(
-      ([productId, data]) => ({
-        productId,
-        ...data
-      })
-    );
+    const salesArray = Object.entries(salesByProduct).map(([productId, data]) => ({
+      productId,
+      ...data,
+    }));
 
     salesArray.sort((a, b) => b.quantitySold - a.quantitySold);
 
     const mostSold = salesArray.slice(0, 5);
-    const leastSold =
-      salesArray.length > 5
-        ? salesArray.slice(-5).reverse()
-        : [];
+    const leastSold = salesArray.length > 5 ? salesArray.slice(-5).reverse() : [];
 
-    const totalRevenue = completedSales.reduce(
-      (sum, sale) => sum + sale.totalAmount,
-      0
-    );
-
-    const totalItemsSold = completedSales.reduce(
-      (sum, sale) => sum + sale.quantity,
-      0
-    );
+    const totalRevenue = completedSales.reduce((sum, sale) => sum + (sale.totalAmount ?? 0), 0);
+    const totalItemsSold = completedSales.reduce((sum, sale) => sum + (sale.quantity ?? 0), 0);
 
     return {
       soldGoods,
@@ -79,7 +57,7 @@ export function ReportsAnalytics({ products, sales, setSales }) {
       leastSold,
       totalRevenue,
       totalItemsSold,
-      hasSales: completedSales.length > 0
+      hasSales: completedSales.length > 0,
     };
   }, [sales]);
 
@@ -92,8 +70,13 @@ export function ReportsAnalytics({ products, sales, setSales }) {
       month: "short",
       day: "numeric",
       hour: "2-digit",
-      minute: "2-digit"
+      minute: "2-digit",
     });
+
+  /* =========================
+     SAFE TOFIX HELPER
+  ========================== */
+  const safeToFixed = (num, decimals = 2) => (num ?? 0).toFixed(decimals);
 
   return (
     <div className="card">
@@ -111,12 +94,8 @@ export function ReportsAnalytics({ products, sales, setSales }) {
           <div className="confirm-box">
             <h3>Clear All Sales Data?</h3>
             <p>This action cannot be undone.</p>
-
             <div className="confirm-actions">
-              <button
-                className="btn cancel"
-                onClick={() => setShowConfirm(false)}
-              >
+              <button className="btn cancel" onClick={() => setShowConfirm(false)}>
                 Cancel
               </button>
               <button className="btn danger" onClick={clearAllData}>
@@ -134,9 +113,7 @@ export function ReportsAnalytics({ products, sales, setSales }) {
           <div className="stat-box total-revenue">
             <DollarSign className="icon stat-icon" />
             <p>Total Revenue</p>
-            <p className="stat-value">
-              ksh{analytics.totalRevenue.toFixed(2)}
-            </p>
+            <p className="stat-value">ksh{safeToFixed(analytics.totalRevenue)}</p>
           </div>
 
           <div className="stat-box total-items">
@@ -150,9 +127,7 @@ export function ReportsAnalytics({ products, sales, setSales }) {
           <div className="no-sales">
             <TrendingUp className="icon no-sales-icon" />
             <p>No completed sales yet</p>
-            <p className="text-muted">
-              Pending orders are not counted as sales
-            </p>
+            <p className="text-muted">Pending orders are not counted as sales</p>
           </div>
         ) : (
           <>
@@ -167,16 +142,13 @@ export function ReportsAnalytics({ products, sales, setSales }) {
                 {analytics.soldGoods.map((sale, index) => (
                   <div key={index} className="analytics-item">
                     <div>
-                      <p className="product-name">
-                        {sale.productName}
-                      </p>
+                      <p className="product-name">{sale.productName ?? "Unknown"}</p>
                       <p className="product-details">
-                        Qty: {sale.quantity} ·{" "}
-                        {formatDate(sale.createdAt)}
+                        Qty: {sale.quantity ?? 0} · {formatDate(sale.createdAt)}
                       </p>
                     </div>
                     <p className="product-value">
-                      ksh{sale.totalAmount.toFixed(2)}
+                      ksh{safeToFixed(sale.totalAmount)}
                     </p>
                   </div>
                 ))}
@@ -191,17 +163,13 @@ export function ReportsAnalytics({ products, sales, setSales }) {
                   <h3>Most Sold Products</h3>
                 </div>
 
-                {analytics.mostSold.map((item, index) => (
+                {analytics.mostSold.map((item) => (
                   <div key={item.productId} className="analytics-item most-sold">
                     <div>
                       <p className="product-name">{item.productName}</p>
-                      <p className="product-details">
-                        Sold: {item.quantitySold} units
-                      </p>
+                      <p className="product-details">Sold: {item.quantitySold} units</p>
                     </div>
-                    <p className="product-value">
-                      ${item.revenue.toFixed(2)}
-                    </p>
+                    <p className="product-value">${safeToFixed(item.revenue)}</p>
                   </div>
                 ))}
               </div>
@@ -216,19 +184,12 @@ export function ReportsAnalytics({ products, sales, setSales }) {
                 </div>
 
                 {analytics.leastSold.map((item) => (
-                  <div
-                    key={item.productId}
-                    className="analytics-item least-sold"
-                  >
+                  <div key={item.productId} className="analytics-item least-sold">
                     <div>
                       <p className="product-name">{item.productName}</p>
-                      <p className="product-details">
-                        Sold: {item.quantitySold} units
-                      </p>
+                      <p className="product-details">Sold: {item.quantitySold} units</p>
                     </div>
-                    <p className="product-value">
-                      ${item.revenue.toFixed(2)}
-                    </p>
+                    <p className="product-value">${safeToFixed(item.revenue)}</p>
                   </div>
                 ))}
               </div>

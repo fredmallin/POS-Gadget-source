@@ -11,6 +11,10 @@ import { ReportsAnalytics } from "./ReportsAnalytics";
 import { PendingSales } from "./PendingSales";
 
 import { verifyAdminPassword } from "../utils/auth";
+import { useOnlineStatus } from "../hooks/useOnlineStatus"; // ✅ online detection
+import { queueOfflineAction, getOfflineQueue, clearOfflineQueue } from "../utils/offlineQueue";
+import { syncOfflineData } from "../utils/syncOfflineData";
+
 import "../index.css";
 
 export default function Dashboard() {
@@ -34,6 +38,17 @@ export default function Dashboard() {
   };
 
   const switchToUser = () => setIsAdmin(false);
+
+  /* =======================
+     ONLINE / OFFLINE STATUS
+  ======================== */
+  const online = useOnlineStatus();
+
+  useEffect(() => {
+    if (online) {
+      syncOfflineData();
+    }
+  }, [online]);
 
   /* =======================
      FIREBASE STATE
@@ -67,79 +82,128 @@ export default function Dashboard() {
      PRODUCT MANAGEMENT
   ======================== */
   const addProduct = (product) => {
-    push(ref(db, "products"), product);
+    if (online) {
+      push(ref(db, "products"), product);
+    } else {
+      queueOfflineAction({ type: "ADD_PRODUCT", payload: product });
+    }
   };
 
   const updateProduct = (id, updates) => {
-    update(ref(db, `products/${id}`), updates);
+    if (online) {
+      update(ref(db, `products/${id}`), updates);
+    } else {
+      queueOfflineAction({ type: "UPDATE_PRODUCT", productId: id, payload: updates });
+    }
   };
 
   const deleteProduct = (id) => {
-    remove(ref(db, `products/${id}`));
+    if (online) {
+      remove(ref(db, `products/${id}`));
+    } else {
+      queueOfflineAction({ type: "DELETE_PRODUCT", productId: id });
+    }
   };
 
   /* =======================
      SELL PRODUCT
   ======================== */
   const sellProduct = (productId, quantity) => {
-    const product = products.find((p) => p.id === productId);
-    if (!product || product.stock < quantity) {
-      alert("Insufficient stock!");
-      return;
-    }
+    // update local UI immediately
+    setProducts(prev =>
+      prev.map(p =>
+        p.id === productId ? { ...p, stock: p.stock - quantity } : p
+      )
+    );
 
-    update(ref(db, `products/${productId}`), {
-      stock: product.stock - quantity,
-    });
-
-    push(ref(db, "sales"), {
+    const product = products.find(p => p.id === productId);
+    const sale = {
       productId,
-      productName: product.name,
+      productName: product?.name || "Unknown",
       quantity,
-      totalAmount: product.price * quantity,
+      totalAmount: (product?.price || 0) * quantity,
       createdAt: new Date().toISOString(),
       status: "COMPLETED",
-    });
+    };
+
+    setSales(prev => [...prev, sale]);
+
+    if (!online) {
+      queueOfflineAction({ type: "SALE", payload: sale });
+    } else {
+      push(ref(db, "sales"), sale);
+      // also update stock in Firebase
+      update(ref(db, `products/${productId}`), {
+        stock: product.stock - quantity,
+      });
+    }
   };
 
   /* =======================
      HOLD PENDING ORDER
   ======================== */
   const holdOrder = (order) => {
-    push(ref(db, "sales"), {
+    const pending = {
       ...order,
       status: "PENDING",
       createdAt: new Date().toISOString(),
-    });
+    };
+
+    setSales(prev => [...prev, pending]);
+
+    if (!online) {
+      queueOfflineAction({ type: "SALE", payload: pending });
+    } else {
+      push(ref(db, "sales"), pending);
+    }
   };
 
   /* =======================
      COMPLETE PENDING ORDER
   ======================== */
   const completeOrder = (orderId) => {
-    const order = sales.find((s) => s.id === orderId);
+    const order = sales.find(s => s.id === orderId);
     if (!order) return;
 
-    const product = products.find((p) => p.id === order.productId);
+    const product = products.find(p => p.id === order.productId);
     if (!product || product.stock < order.quantity) {
       alert("Insufficient stock!");
       return;
     }
 
-    update(ref(db, `products/${order.productId}`), {
-      stock: product.stock - order.quantity,
-    });
+    setProducts(prev =>
+      prev.map(p =>
+        p.id === product.id ? { ...p, stock: p.stock - order.quantity } : p
+      )
+    );
 
-    update(ref(db, `sales/${orderId}`), {
-      status: "COMPLETED",
-    });
+    setSales(prev =>
+      prev.map(s =>
+        s.id === orderId ? { ...s, status: "COMPLETED" } : s
+      )
+    );
+
+    if (online) {
+      update(ref(db, `products/${order.productId}`), {
+        stock: product.stock - order.quantity,
+      });
+      update(ref(db, `sales/${orderId}`), { status: "COMPLETED" });
+    } else {
+      queueOfflineAction({ type: "COMPLETE_ORDER", orderId });
+    }
   };
 
   /* =======================
      CANCEL PENDING ORDER
   ======================== */
   const cancelOrder = (orderId) => {
-    remove(ref(db, `sales/${orderId}`));
+    setSales(prev => prev.filter(s => s.id !== orderId));
+
+    if (online) {
+      remove(ref(db, `sales/${orderId}`));
+    } else {
+      queueOfflineAction({ type: "CANCEL_ORDER", orderId });
+    }
   };
 
   /* =======================
