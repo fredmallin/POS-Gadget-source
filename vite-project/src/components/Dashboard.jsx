@@ -133,7 +133,7 @@ export default function Dashboard() {
     } else {
       push(ref(db, "sales"), sale);
       // also update stock in Firebase
-      update(ref(db, `products/${productId}`), {
+      update(ref(db, `products/ksh{productId}`), {
         stock: product.stock - quantity,
       });
     }
@@ -184,10 +184,10 @@ export default function Dashboard() {
     );
 
     if (online) {
-      update(ref(db, `products/${order.productId}`), {
+      update(ref(db, `products/ksh{order.productId}`), {
         stock: product.stock - order.quantity,
       });
-      update(ref(db, `sales/${orderId}`), { status: "COMPLETED" });
+      update(ref(db, `sales/ksh{orderId}`), { status: "COMPLETED" });
     } else {
       queueOfflineAction({ type: "COMPLETE_ORDER", orderId });
     }
@@ -200,7 +200,7 @@ export default function Dashboard() {
     setSales(prev => prev.filter(s => s.id !== orderId));
 
     if (online) {
-      remove(ref(db, `sales/${orderId}`));
+      remove(ref(db, `sales/ksh{orderId}`));
     } else {
       queueOfflineAction({ type: "CANCEL_ORDER", orderId });
     }

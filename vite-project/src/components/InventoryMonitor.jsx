@@ -21,7 +21,7 @@ export function InventoryMonitor({ products }) {
           </div>
           <div className="stat-box total-value">
             <p>Total Inventory Value</p>
-            <p>${totalValue.toFixed(2)}</p>
+            <p>ksh{totalValue.toFixed(2)}</p>
           </div>
         </div>
 

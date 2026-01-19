@@ -123,7 +123,7 @@ export function ProductManager() {
 
           <div className="grid-2 gap-4">
             <div className="form-group">
-              <label>Price ($)</label>
+              <label>Price (ksh)</label>
               <input
                 className="input"
                 type="number"
@@ -200,7 +200,7 @@ export function ProductManager() {
                 <div className="product-info">
                   <p className="product-name">{product.name}</p>
                   <p className="product-details">
-                    ${product.price.toFixed(2)} · Stock: {product.stock}
+                    ksh{product.price.toFixed(2)} · Stock: {product.stock}
                   </p>
                 </div>
 

@@ -93,7 +93,7 @@ export function PendingSales({
           setProductSearch(p.name); // show product name in search box
         }}
       >
-        {p.name} - ${p.price.toFixed(2)} (Stock: {p.stock})
+        {p.name} - ksh{p.price.toFixed(2)} (Stock: {p.stock})
       </li>
     ))}
   </ul>
@@ -129,7 +129,7 @@ export function PendingSales({
             <div className="total-box">
               <p>Total Amount</p>
               <strong>
-                ${(selectedProduct.price * parseInt(quantity || 0)).toFixed(2)}
+                ksh{(selectedProduct.price * parseInt(quantity || 0)).toFixed(2)}
               </strong>
             </div>
           )}
@@ -160,7 +160,7 @@ export function PendingSales({
                       <p className="bold">{order.productName}</p>
                       <p>Customer: {order.customerName}</p>
                       <p>
-                        Quantity: {order.quantity} × $
+                        Quantity: {order.quantity} × ksh
                         {(order.totalAmount / order.quantity).toFixed(2)}
                       </p>
                       {order.notes && <p className="note">Note: {order.notes}</p>}
@@ -170,7 +170,7 @@ export function PendingSales({
                     </div>
 
                     <div className="amount">
-                      <p>${order.totalAmount.toFixed(2)}</p>
+                      <p>ksh{order.totalAmount.toFixed(2)}</p>
                       {!hasStock && (
                         <span className="badge danger">Low Stock</span>
                       )}

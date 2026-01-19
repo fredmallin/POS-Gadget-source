@@ -169,7 +169,7 @@ export function ReportsAnalytics({ products, sales, setSales }) {
                       <p className="product-name">{item.productName}</p>
                       <p className="product-details">Sold: {item.quantitySold} units</p>
                     </div>
-                    <p className="product-value">${safeToFixed(item.revenue)}</p>
+                    <p className="product-value">ksh{safeToFixed(item.revenue)}</p>
                   </div>
                 ))}
               </div>
@@ -189,7 +189,7 @@ export function ReportsAnalytics({ products, sales, setSales }) {
                       <p className="product-name">{item.productName}</p>
                       <p className="product-details">Sold: {item.quantitySold} units</p>
                     </div>
-                    <p className="product-value">${safeToFixed(item.revenue)}</p>
+                    <p className="product-value">ksh{safeToFixed(item.revenue)}</p>
                   </div>
                 ))}
               </div>
