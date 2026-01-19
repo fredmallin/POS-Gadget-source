@@ -1,14 +1,60 @@
-import React, { useState } from 'react';
-import { Pencil, Trash2, Plus, Search } from 'lucide-react';
-import '../index.css';
+// src/components/ProductManager.jsx
+import React, { useState, useEffect } from "react";
+import { Pencil, Trash2, Plus, Search } from "lucide-react";
+import "../index.css";
+import { db, productsRef } from "../firebase";
+import { onValue, push, update, remove, child } from "firebase/database";
 
-export function ProductManager({ products, addProduct, updateProduct, deleteProduct }) {
-  const [name, setName] = useState('');
-  const [price, setPrice] = useState('');
-  const [stock, setStock] = useState('');
-  const [search, setSearch] = useState('');
+export function ProductManager() {
+  const [products, setProducts] = useState([]);
+  const [name, setName] = useState("");
+  const [price, setPrice] = useState("");
+  const [stock, setStock] = useState("");
+  const [search, setSearch] = useState("");
   const [editingId, setEditingId] = useState(null);
 
+  // -------------------
+  // Fetch products from Firebase (offline-friendly)
+  // -------------------
+  useEffect(() => {
+    const unsubscribe = onValue(productsRef, (snapshot) => {
+      const data = snapshot.val() || {}; // fallback to empty object if offline
+      const productsArray = Object.keys(data).map((key) => ({
+        id: key,
+        ...data[key],
+      }));
+      setProducts(productsArray);
+    });
+
+    return () => unsubscribe(); // cleanup
+  }, []);
+
+  // -------------------
+  // Add a new product
+  // -------------------
+  const addProduct = (productData) => {
+    push(productsRef, productData);
+  };
+
+  // -------------------
+  // Update an existing product
+  // -------------------
+  const updateProduct = (id, productData) => {
+    const productRef = child(productsRef, id);
+    update(productRef, productData);
+  };
+
+  // -------------------
+  // Delete a product
+  // -------------------
+  const deleteProduct = (id) => {
+    const productRef = child(productsRef, id);
+    remove(productRef);
+  };
+
+  // -------------------
+  // Handle form submit
+  // -------------------
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!name || !price || !stock) return;
@@ -26,11 +72,14 @@ export function ProductManager({ products, addProduct, updateProduct, deleteProd
       addProduct(productData);
     }
 
-    setName('');
-    setPrice('');
-    setStock('');
+    setName("");
+    setPrice("");
+    setStock("");
   };
 
+  // -------------------
+  // Handle editing
+  // -------------------
   const handleEdit = (product) => {
     setEditingId(product.id);
     setName(product.name);
@@ -40,15 +89,18 @@ export function ProductManager({ products, addProduct, updateProduct, deleteProd
 
   const handleCancel = () => {
     setEditingId(null);
-    setName('');
-    setPrice('');
-    setStock('');
+    setName("");
+    setPrice("");
+    setStock("");
   };
 
   const filteredProducts = products.filter((product) =>
     product.name.toLowerCase().includes(search.toLowerCase())
   );
 
+  // -------------------
+  // Render UI
+  // -------------------
   return (
     <div className="card">
       <div className="card-header">
@@ -56,6 +108,7 @@ export function ProductManager({ products, addProduct, updateProduct, deleteProd
       </div>
 
       <div className="card-content">
+        {/* Product Form */}
         <form onSubmit={handleSubmit} className="product-form">
           <div className="form-group">
             <label>Product Name</label>
@@ -95,7 +148,7 @@ export function ProductManager({ products, addProduct, updateProduct, deleteProd
             </div>
           </div>
 
-          {/* 🔍 SEARCH INPUT */}
+          {/* Search */}
           <div className="form-group">
             <label>Search Products</label>
             <div className="search-input">
@@ -137,7 +190,7 @@ export function ProductManager({ products, addProduct, updateProduct, deleteProd
           </div>
         </form>
 
-        {/* 📦 PRODUCT LIST */}
+        {/* Product List */}
         <div className="product-list">
           {filteredProducts.length === 0 ? (
             <p className="empty-text">No products found.</p>

@@ -10,8 +10,8 @@ ReactDOM.createRoot(document.getElementById("root")).render(
   </React.StrictMode>
 );
 
-// --- Service Worker Registration for Vite ---
-if ('serviceWorker' in navigator) {
+// --- Service Worker Registration for Vite (PROD ONLY) ---
+if ('serviceWorker' in navigator && import.meta.env.PROD) {
   window.addEventListener('load', () => {
     navigator.serviceWorker
       .register('/sw.js') 
