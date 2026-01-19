@@ -85,7 +85,7 @@ export function SalesTracker({ products, onSell }) {
                   <div className="product-info">
                     <p className="product-name">{product.name}</p>
                     <p className="product-details">
-                      ${product.price.toFixed(2)} · Stock: {product.stock}
+                      ksh{product.price.toFixed(2)} · Stock: {product.stock}
                     </p>
                   </div>
                   <button
@@ -110,7 +110,7 @@ export function SalesTracker({ products, onSell }) {
                   <div>
                     <p>{item.name}</p>
                     <p className="product-price">
-                      ${item.price.toFixed(2)} × {item.quantity}
+                      ksh{item.price.toFixed(2)} × {item.quantity}
                     </p>
                   </div>
                   <div className="cart-actions">
@@ -141,7 +141,7 @@ export function SalesTracker({ products, onSell }) {
               <>
                 <div className="total-amount">
                   <p>Total</p>
-                  <p>${totalAmount.toFixed(2)}</p>
+                  <p>ksh{totalAmount.toFixed(2)}</p>
                 </div>
 
                 <button

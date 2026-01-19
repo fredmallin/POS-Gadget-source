@@ -1,18 +1,18 @@
-// src/firebase.js
 import { initializeApp } from "firebase/app";
-import { getAuth } from "firebase/auth";
-import { getFirestore } from "firebase/firestore";
+import { getDatabase } from "firebase/database";
 
 const firebaseConfig = {
-  apiKey: "YOUR_API_KEY",
-  authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
-  projectId: "YOUR_PROJECT_ID",
-  storageBucket: "YOUR_PROJECT_ID.appspot.com",
-  messagingSenderId: "YOUR_SENDER_ID",
-  appId: "YOUR_APP_ID"
+  apiKey: "AIzaSyDf8OYiHUOAnV_6tV9SWeODD-zU1HmG568",
+  authDomain: "gadget-source-pos.firebaseapp.com",
+  databaseURL: "https://gadget-source-pos-default-rtdb.firebaseio.com",
+  projectId: "gadget-source-pos",
+  storageBucket: "gadget-source-pos.firebasestorage.app",
+  messagingSenderId: "1080185832781",
+  appId: "1:1080185832781:web:6cfb07f6d46fe13e866304",
+   measurementId: "G-RH1X7MKWHW"
 };
 
 const app = initializeApp(firebaseConfig);
 
-export const auth = getAuth(app);
-export const db = getFirestore(app);
+// ✅ THIS EXPORT IS REQUIRED
+export const db = getDatabase(app);

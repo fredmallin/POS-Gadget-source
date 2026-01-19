@@ -135,7 +135,7 @@ export function ReportsAnalytics({ products, sales, setSales }) {
             <DollarSign className="icon stat-icon" />
             <p>Total Revenue</p>
             <p className="stat-value">
-              ${analytics.totalRevenue.toFixed(2)}
+              ksh{analytics.totalRevenue.toFixed(2)}
             </p>
           </div>
 
@@ -176,7 +176,7 @@ export function ReportsAnalytics({ products, sales, setSales }) {
                       </p>
                     </div>
                     <p className="product-value">
-                      ${sale.totalAmount.toFixed(2)}
+                      ksh{sale.totalAmount.toFixed(2)}
                     </p>
                   </div>
                 ))}

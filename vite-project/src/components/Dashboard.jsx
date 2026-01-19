@@ -1,5 +1,8 @@
 import { useState, useEffect } from "react";
 import { Shield } from "lucide-react";
+import { ref, onValue, push, update, remove } from "firebase/database";
+
+import { db } from "../firebase";
 
 import { ProductManager } from "./ProductManager";
 import { SalesTracker } from "./SalesTracker";
@@ -7,24 +10,21 @@ import { InventoryMonitor } from "./InventoryMonitor";
 import { ReportsAnalytics } from "./ReportsAnalytics";
 import { PendingSales } from "./PendingSales";
 
-import { verifyAdminPassword } from "../utils/auth"; // ✅ Import verify function
-
+import { verifyAdminPassword } from "../utils/auth";
 import "../index.css";
 
 export default function Dashboard() {
   /* =======================
      ROLE MANAGEMENT
   ======================== */
-  const [isAdmin, setIsAdmin] = useState(false); // User by default
+  const [isAdmin, setIsAdmin] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [password, setPassword] = useState("");
 
-  const requestAdmin = () => {
-    setShowPassword(true);
-  };
+  const requestAdmin = () => setShowPassword(true);
 
   const verifyPassword = () => {
-    if (verifyAdminPassword(password)) { // ✅ Use bcrypt check
+    if (verifyAdminPassword(password)) {
       setIsAdmin(true);
       setShowPassword(false);
       setPassword("");
@@ -33,93 +33,84 @@ export default function Dashboard() {
     }
   };
 
-  const switchToUser = () => {
-    setIsAdmin(false);
-  };
+  const switchToUser = () => setIsAdmin(false);
 
   /* =======================
-     LOAD FROM LOCAL STORAGE
+     FIREBASE STATE
   ======================== */
-  const [products, setProducts] = useState(() => {
-    const saved = localStorage.getItem("products");
-    return saved ? JSON.parse(saved) : [];
-  });
-
-  const [sales, setSales] = useState(() => {
-    const saved = localStorage.getItem("sales");
-    return saved ? JSON.parse(saved) : [];
-  });
+  const [products, setProducts] = useState([]);
+  const [sales, setSales] = useState([]);
 
   /* =======================
-     PERSIST TO LOCAL STORAGE
+     LOAD FROM FIREBASE
   ======================== */
   useEffect(() => {
-    localStorage.setItem("products", JSON.stringify(products));
-  }, [products]);
+    const productsRef = ref(db, "products");
+    const salesRef = ref(db, "sales");
 
-  useEffect(() => {
-    localStorage.setItem("sales", JSON.stringify(sales));
-  }, [sales]);
+    onValue(productsRef, (snap) => {
+      const data = snap.val();
+      setProducts(
+        data ? Object.entries(data).map(([id, v]) => ({ id, ...v })) : []
+      );
+    });
+
+    onValue(salesRef, (snap) => {
+      const data = snap.val();
+      setSales(
+        data ? Object.entries(data).map(([id, v]) => ({ id, ...v })) : []
+      );
+    });
+  }, []);
 
   /* =======================
      PRODUCT MANAGEMENT
   ======================== */
   const addProduct = (product) => {
-    setProducts([...products, { ...product, id: Date.now().toString() }]);
+    push(ref(db, "products"), product);
   };
 
   const updateProduct = (id, updates) => {
-    setProducts(products.map((p) => (p.id === id ? { ...p, ...updates } : p)));
+    update(ref(db, `products/${id}`), updates);
   };
 
   const deleteProduct = (id) => {
-    setProducts(products.filter((p) => p.id !== id));
+    remove(ref(db, `products/${id}`));
   };
 
+  /* =======================
+     SELL PRODUCT
+  ======================== */
   const sellProduct = (productId, quantity) => {
-  setProducts(prevProducts => {
-    const product = prevProducts.find(p => p.id === productId);
-
+    const product = products.find((p) => p.id === productId);
     if (!product || product.stock < quantity) {
       alert("Insufficient stock!");
-      return prevProducts;
+      return;
     }
 
-    return prevProducts.map(p =>
-      p.id === productId
-        ? { ...p, stock: p.stock - quantity }
-        : p
-    );
-  });
+    update(ref(db, `products/${productId}`), {
+      stock: product.stock - quantity,
+    });
 
-  setSales(prevSales => {
-    const product = products.find(p => p.id === productId);
-    if (!product) return prevSales;
-
-    return [
-      ...prevSales,
-      {
-        id: Date.now().toString() + Math.random(),
-        productId,
-        productName: product.name,
-        quantity,
-        totalAmount: product.price * quantity,
-        createdAt: new Date().toISOString(),
-        status: "COMPLETED",
-      },
-    ];
-  });
-};
-
+    push(ref(db, "sales"), {
+      productId,
+      productName: product.name,
+      quantity,
+      totalAmount: product.price * quantity,
+      createdAt: new Date().toISOString(),
+      status: "COMPLETED",
+    });
+  };
 
   /* =======================
      HOLD PENDING ORDER
   ======================== */
   const holdOrder = (order) => {
-    setSales([
-      ...sales,
-      { ...order, id: Date.now().toString(), createdAt: new Date().toISOString(), status: "PENDING" },
-    ]);
+    push(ref(db, "sales"), {
+      ...order,
+      status: "PENDING",
+      createdAt: new Date().toISOString(),
+    });
   };
 
   /* =======================
@@ -130,23 +121,25 @@ export default function Dashboard() {
     if (!order) return;
 
     const product = products.find((p) => p.id === order.productId);
-    if (!product) return;
-
-    if (product.stock < order.quantity) {
+    if (!product || product.stock < order.quantity) {
       alert("Insufficient stock!");
       return;
     }
 
-    updateProduct(order.productId, { stock: product.stock - order.quantity });
+    update(ref(db, `products/${order.productId}`), {
+      stock: product.stock - order.quantity,
+    });
 
-    setSales(sales.map((s) => (s.id === orderId ? { ...s, status: "COMPLETED" } : s)));
+    update(ref(db, `sales/${orderId}`), {
+      status: "COMPLETED",
+    });
   };
 
   /* =======================
      CANCEL PENDING ORDER
   ======================== */
   const cancelOrder = (orderId) => {
-    setSales(sales.filter((s) => s.id !== orderId));
+    remove(ref(db, `sales/${orderId}`));
   };
 
   /* =======================
@@ -192,22 +185,18 @@ export default function Dashboard() {
           deleteProduct={deleteProduct}
         />
 
-        <SalesTracker products={products} onSell={sellProduct} onHold={holdOrder} />
+        <SalesTracker products={products} onSell={sellProduct} />
       </div>
 
-      {/* ADMIN-ONLY SECTIONS */}
+      {/* ADMIN ONLY */}
       {isAdmin && (
-          <div className="dashboard-grid">
+        <div className="dashboard-grid">
           <InventoryMonitor products={products} />
-          <ReportsAnalytics
-           products={products}
-           sales={sales}
-           setSales={setSales}   
-        />
-      </div>
-    )}
+          <ReportsAnalytics products={products} sales={sales} />
+        </div>
+      )}
 
-      {/* SHARED SECTION */}
+      {/* SHARED */}
       <div className="dashboard-grid">
         <PendingSales
           products={products}
