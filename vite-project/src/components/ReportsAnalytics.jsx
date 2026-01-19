@@ -111,7 +111,7 @@ export function ReportsAnalytics({ products, sales, setSales }) {
         {/* STATS */}
         <div className="grid-2 gap-4 mb-6">
           <div className="stat-box total-revenue">
-            <DollarSign className="icon stat-icon" />
+           <span className="icon stat-icon">KSh</span>
             <p>Total Revenue</p>
             <p className="stat-value">ksh{safeToFixed(analytics.totalRevenue)}</p>
           </div>

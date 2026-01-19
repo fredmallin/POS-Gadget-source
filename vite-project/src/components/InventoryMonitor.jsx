@@ -41,13 +41,13 @@ export function InventoryMonitor({ products }) {
             const stockValue = product.price * product.stock;
 
             return (
-              <div key={product.id} className={`product-item ${isLowStock ? 'low-stock' : ''}`}>
+              <div key={product.id} className={`product-item ksh{isLowStock ? 'low-stock' : ''}`}>
                 <div className="product-info">
-                  <Package className={`icon ${isLowStock ? 'alert-icon' : 'normal-icon'}`} />
+                  <Package className={`icon ksh{isLowStock ? 'alert-icon' : 'normal-icon'}`} />
                   <div>
                     <p className={isLowStock ? 'product-name alert-text' : 'product-name'}>{product.name}</p>
                     <p className="product-details">
-                      Stock: {product.stock} · Value: ${stockValue.toFixed(2)}
+                      Stock: {product.stock} · Value: ksh{stockValue.toFixed(2)}
                     </p>
                   </div>
                 </div>
