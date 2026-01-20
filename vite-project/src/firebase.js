@@ -28,12 +28,14 @@ enableLogging(true);
 // Reference to products path
 export const productsRef = ref(db, "products");
 
+// Reference to sales path (NEW)
+export const salesRef = ref(db, "sales"); // <-- add this
+
 // -------------------
 // OFFLINE SUPPORT
 // -------------------
 // Realtime Database in browsers automatically caches data for offline reads
-// There is NO `db.persistence = true` for web (that is mobile-only)
-// Just use `onValue` listeners and Firebase handles offline caching
+// Use onValue listeners; Firebase handles offline caching automatically
 
 // -------------------
 // Optional: connect to local emulator (for dev)

@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from "react";
 import { Pencil, Trash2, Plus, Search } from "lucide-react";
 import "../index.css";
-import { db, productsRef } from "../firebase";
+import { db, productsRef, salesRef } from "../firebase"; // make sure salesRef is exported from firebase.js
 import { onValue, push, update, remove, child } from "firebase/database";
 
 export function ProductManager() {
@@ -18,7 +18,7 @@ export function ProductManager() {
   // -------------------
   useEffect(() => {
     const unsubscribe = onValue(productsRef, (snapshot) => {
-      const data = snapshot.val() || {}; // fallback to empty object if offline
+      const data = snapshot.val() || {}; // fallback if offline
       const productsArray = Object.keys(data).map((key) => ({
         id: key,
         ...data[key],
@@ -26,7 +26,7 @@ export function ProductManager() {
       setProducts(productsArray);
     });
 
-    return () => unsubscribe(); // cleanup
+    return () => unsubscribe();
   }, []);
 
   // -------------------
@@ -50,6 +50,34 @@ export function ProductManager() {
   const deleteProduct = (id) => {
     const productRef = child(productsRef, id);
     remove(productRef);
+  };
+
+  // -------------------
+  // Sell a product
+  // -------------------
+  const handleSell = (product) => {
+    if (product.stock <= 0) return; // can't sell if out of stock
+
+    const newStock = product.stock - 1;
+
+    // Update local state immediately
+    setProducts((prev) =>
+      prev.map((p) => (p.id === product.id ? { ...p, stock: newStock } : p))
+    );
+
+    // Update Firebase
+    const productRef = child(productsRef, product.id);
+    update(productRef, { stock: newStock });
+
+    // Record sale in /sales
+    if (salesRef) {
+      push(salesRef, {
+        productId: product.id,
+        name: product.name,
+        quantity: 1,
+        date: Date.now(),
+      });
+    }
   };
 
   // -------------------
@@ -215,6 +243,13 @@ export function ProductManager() {
                 </div>
 
                 <div className="product-actions">
+                  <button
+                    className="btn btn-outline btn-small btn-success"
+                    onClick={() => handleSell(product)}
+                  >
+                    Sell
+                  </button>
+
                   <button
                     className="btn btn-outline btn-small"
                     onClick={() => handleEdit(product)}
