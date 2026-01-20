@@ -14,7 +14,7 @@ export function ProductManager() {
   const [editingId, setEditingId] = useState(null);
 
   // -------------------
-  // Fetch products from Firebase (offline-friendly)
+  // Fetch products from Firebase
   // -------------------
   useEffect(() => {
     const unsubscribe = onValue(productsRef, (snapshot) => {
@@ -82,9 +82,9 @@ export function ProductManager() {
   // -------------------
   const handleEdit = (product) => {
     setEditingId(product.id);
-    setName(product.name);
-    setPrice(product.price.toString());
-    setStock(product.stock.toString());
+    setName(product.name || "");
+    setPrice(product.price !== undefined ? product.price.toString() : "");
+    setStock(product.stock !== undefined ? product.stock.toString() : "");
   };
 
   const handleCancel = () => {
@@ -94,8 +94,14 @@ export function ProductManager() {
     setStock("");
   };
 
-  const filteredProducts = products.filter((product) =>
-    product.name.toLowerCase().includes(search.toLowerCase())
+  // -------------------
+  // Filter products safely
+  // -------------------
+  const filteredProducts = products.filter(
+    (product) =>
+      product.name &&
+      typeof product.name === "string" &&
+      product.name.toLowerCase().includes(search.toLowerCase())
   );
 
   // -------------------
@@ -198,9 +204,13 @@ export function ProductManager() {
             filteredProducts.map((product) => (
               <div key={product.id} className="product-item">
                 <div className="product-info">
-                  <p className="product-name">{product.name}</p>
+                  <p className="product-name">{product.name || "Unnamed"}</p>
                   <p className="product-details">
-                    ksh{product.price.toFixed(2)} · Stock: {product.stock}
+                    ksh
+                    {product.price !== undefined
+                      ? product.price.toFixed(2)
+                      : "0.00"}{" "}
+                    · Stock: {product.stock !== undefined ? product.stock : 0}
                   </p>
                 </div>
 

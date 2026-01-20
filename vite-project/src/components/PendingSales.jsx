@@ -1,14 +1,12 @@
+// src/components/PendingSales.jsx
 import { useState } from "react";
 import { Clock, CheckCircle, XCircle, Plus } from "lucide-react";
 import { Search } from "lucide-react";
-
-
-
 import "../index.css";
 
 export function PendingSales({
-  products,
-  pendingOrders,
+  products = [],
+  pendingOrders = [],
   onHoldOrder,
   onCompleteOrder,
   onCancelOrder
@@ -17,15 +15,22 @@ export function PendingSales({
   const [quantity, setQuantity] = useState("1");
   const [customerName, setCustomerName] = useState("");
   const [notes, setNotes] = useState("");
-  const [productSearch, setProductSearch] = useState(""); // 🔹 Search term
+  const [productSearch, setProductSearch] = useState("");
 
   const selectedProduct = products.find(p => p.id === selectedProductId);
 
-  // Filter products based on search
-  const filteredProducts = products.filter((p) =>
-    p.name.toLowerCase().includes(productSearch.toLowerCase())
+  // -------------------
+  // Filter products safely
+  // -------------------
+  const filteredProducts = products.filter(
+    (p) =>
+      p.name && typeof p.name === "string" &&
+      p.name.toLowerCase().includes(productSearch.toLowerCase())
   );
 
+  // -------------------
+  // Handle hold order
+  // -------------------
   const handleHoldOrder = (e) => {
     e.preventDefault();
     if (!selectedProductId || !customerName) return;
@@ -34,19 +39,19 @@ export function PendingSales({
     if (qty <= 0) return;
 
     const product = products.find(p => p.id === selectedProductId);
-    if (!product) return;
+    if (!product || !product.price) return;
 
     onHoldOrder({
       id: Date.now().toString(),
       productId: product.id,
-      productName: product.name,
+      productName: product.name || "Unknown",
       quantity: qty,
-      totalAmount: product.price * qty,
+      totalAmount: (product.price || 0) * qty,
       customerName,
       notes: notes || undefined,
       createdAt: new Date().toISOString(),
       paid: 0,
-      balance: product.price * qty,
+      balance: (product.price || 0) * qty,
       status: "PENDING"
     });
 
@@ -55,7 +60,7 @@ export function PendingSales({
     setQuantity("1");
     setCustomerName("");
     setNotes("");
-    setProductSearch(""); // reset search
+    setProductSearch("");
   };
 
   return (
@@ -71,36 +76,36 @@ export function PendingSales({
         <form className="order-form" onSubmit={handleHoldOrder}>
           <h3>Hold New Order</h3>
 
+          {/* SEARCH */}
           <div className="search-container">
-  <Search size={18} className="search-icon" />
-  <input
-    type="text"
-    placeholder="Search products..."
-    value={productSearch}
-    onChange={(e) => setProductSearch(e.target.value)}
-  />
-</div>
+            <Search size={18} className="search-icon" />
+            <input
+              type="text"
+              placeholder="Search products..."
+              value={productSearch}
+              onChange={(e) => setProductSearch(e.target.value)}
+            />
+          </div>
 
-{/* 🔹 SEARCH RESULTS */}
-{productSearch && filteredProducts.length > 0 && (
-  <ul className="search-results">
-    {filteredProducts.map((p) => (
-      <li
-        key={p.id}
-        className={p.id === selectedProductId ? "selected" : ""}
-        onClick={() => {
-          setSelectedProductId(p.id);
-          setProductSearch(p.name); // show product name in search box
-        }}
-      >
-        {p.name} - ksh{p.price.toFixed(2)} (Stock: {p.stock})
-      </li>
-    ))}
-  </ul>
-)}
+          {/* 🔹 SEARCH RESULTS */}
+          {productSearch && filteredProducts.length > 0 && (
+            <ul className="search-results">
+              {filteredProducts.map((p) => (
+                <li
+                  key={p.id}
+                  className={p.id === selectedProductId ? "selected" : ""}
+                  onClick={() => {
+                    setSelectedProductId(p.id);
+                    setProductSearch(p.name || ""); // safe fallback
+                  }}
+                >
+                  {p.name || "Unnamed"} - ksh{(p.price || 0).toFixed(2)} (Stock: {p.stock || 0})
+                </li>
+              ))}
+            </ul>
+          )}
 
-
-
+          {/* FORM FIELDS */}
           <label>Quantity</label>
           <input
             type="number"
@@ -125,11 +130,11 @@ export function PendingSales({
             onChange={(e) => setNotes(e.target.value)}
           />
 
-          {selectedProduct && (
+          {selectedProduct && selectedProduct.price != null && (
             <div className="total-box">
               <p>Total Amount</p>
               <strong>
-                ksh{(selectedProduct.price * parseInt(quantity || 0)).toFixed(2)}
+                ksh{((selectedProduct.price || 0) * parseInt(quantity || 0)).toFixed(2)}
               </strong>
             </div>
           )}
@@ -151,29 +156,31 @@ export function PendingSales({
           ) : (
             pendingOrders.map((order) => {
               const product = products.find((p) => p.id === order.productId);
-              const hasStock = product && product.stock >= order.quantity;
+              const hasStock = product && product.stock >= (order.quantity || 0);
 
               return (
                 <div className="order-item" key={order.id}>
                   <div className="order-top">
                     <div>
-                      <p className="bold">{order.productName}</p>
-                      <p>Customer: {order.customerName}</p>
+                      <p className="bold">{order.productName || "Unknown Product"}</p>
+                      <p>Customer: {order.customerName || "Unknown"}</p>
                       <p>
-                        Quantity: {order.quantity} × ksh
-                        {(order.totalAmount / order.quantity).toFixed(2)}
+                        Quantity: {order.quantity || 0} × ksh
+                        {order.totalAmount && order.quantity
+                          ? (order.totalAmount / order.quantity).toFixed(2)
+                          : "0.00"}
                       </p>
                       {order.notes && <p className="note">Note: {order.notes}</p>}
                       <p className="time">
-                        Held: {new Date(order.createdAt).toLocaleString()}
+                        Held: {order.createdAt
+                          ? new Date(order.createdAt).toLocaleString()
+                          : "Unknown"}
                       </p>
                     </div>
 
                     <div className="amount">
-                      <p>ksh{order.totalAmount.toFixed(2)}</p>
-                      {!hasStock && (
-                        <span className="badge danger">Low Stock</span>
-                      )}
+                      <p>ksh{order.totalAmount ? order.totalAmount.toFixed(2) : "0.00"}</p>
+                      {!hasStock && <span className="badge danger">Low Stock</span>}
                     </div>
                   </div>
 

@@ -1,15 +1,24 @@
-import React, { useState } from 'react';
-import { ShoppingCart, Plus, Minus, Search, Trash2 } from 'lucide-react';
-import '../index.css';
+// src/components/SalesTracker.jsx
+import React, { useState } from "react";
+import { ShoppingCart, Plus, Minus, Search, Trash2 } from "lucide-react";
+import "../index.css";
 
-export function SalesTracker({ products, onSell }) {
-  const [search, setSearch] = useState('');
+export function SalesTracker({ products = [], onSell }) {
+  const [search, setSearch] = useState("");
   const [cart, setCart] = useState([]);
 
-  const filteredProducts = products.filter((p) =>
-    p.name.toLowerCase().includes(search.toLowerCase())
+  // -------------------
+  // Filter products safely
+  // -------------------
+  const filteredProducts = products.filter(
+    (p) =>
+      p.name && typeof p.name === "string" && // check that name exists
+      p.name.toLowerCase().includes(search.toLowerCase())
   );
 
+  // -------------------
+  // Add product to cart
+  // -------------------
   const addToCart = (product) => {
     setCart((prev) => {
       const existing = prev.find((item) => item.id === product.id);
@@ -24,34 +33,47 @@ export function SalesTracker({ products, onSell }) {
     });
   };
 
+  // -------------------
+  // Update quantity
+  // -------------------
   const updateQuantity = (id, delta) => {
     setCart((prev) =>
       prev
         .map((item) =>
-          item.id === id
-            ? { ...item, quantity: item.quantity + delta }
-            : item
+          item.id === id ? { ...item, quantity: item.quantity + delta } : item
         )
         .filter((item) => item.quantity > 0)
     );
   };
 
+  // -------------------
+  // Remove item from cart
+  // -------------------
   const removeItem = (id) => {
     setCart((prev) => prev.filter((item) => item.id !== id));
   };
 
+  // -------------------
+  // Calculate total
+  // -------------------
   const totalAmount = cart.reduce(
-    (sum, item) => sum + item.price * item.quantity,
+    (sum, item) => sum + (item.price || 0) * item.quantity,
     0
   );
 
+  // -------------------
+  // Checkout
+  // -------------------
   const handleCheckout = () => {
     cart.forEach((item) => {
-      onSell(item.id, item.quantity);
+      if (onSell) onSell(item.id, item.quantity);
     });
     setCart([]);
   };
 
+  // -------------------
+  // Render
+  // -------------------
   return (
     <div className="card">
       <div className="card-header">
@@ -85,13 +107,14 @@ export function SalesTracker({ products, onSell }) {
                   <div className="product-info">
                     <p className="product-name">{product.name}</p>
                     <p className="product-details">
-                      ksh{product.price.toFixed(2)} · Stock: {product.stock}
+                      ksh{(product.price || 0).toFixed(2)} · Stock:{" "}
+                      {product.stock || 0}
                     </p>
                   </div>
                   <button
                     className="btn btn-primary btn-small"
                     onClick={() => addToCart(product)}
-                    disabled={product.stock === 0}
+                    disabled={!product.stock}
                   >
                     <Plus className="icon" /> Add
                   </button>
@@ -110,7 +133,7 @@ export function SalesTracker({ products, onSell }) {
                   <div>
                     <p>{item.name}</p>
                     <p className="product-price">
-                      ksh{item.price.toFixed(2)} × {item.quantity}
+                      ksh{(item.price || 0).toFixed(2)} × {item.quantity}
                     </p>
                   </div>
                   <div className="cart-actions">
