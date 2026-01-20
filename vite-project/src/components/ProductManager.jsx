@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from "react";
 import { Pencil, Trash2, Plus, Search } from "lucide-react";
 import "../index.css";
-import { productsRef } from "../firebase";
+import { db, productsRef } from "../firebase";
 import { onValue, push, update, remove, child } from "firebase/database";
 
 export function ProductManager() {
@@ -12,26 +12,13 @@ export function ProductManager() {
   const [stock, setStock] = useState("");
   const [search, setSearch] = useState("");
   const [editingId, setEditingId] = useState(null);
-  const [isOffline, setIsOffline] = useState(!navigator.onLine);
 
-  // 🔌 Detect online/offline
-  useEffect(() => {
-    const handleOnline = () => setIsOffline(false);
-    const handleOffline = () => setIsOffline(true);
-
-    window.addEventListener("online", handleOnline);
-    window.addEventListener("offline", handleOffline);
-
-    return () => {
-      window.removeEventListener("online", handleOnline);
-      window.removeEventListener("offline", handleOffline);
-    };
-  }, []);
-
-  // 🔥 Fetch products (cached when offline)
+  // -------------------
+  // Fetch products from Firebase (offline-friendly)
+  // -------------------
   useEffect(() => {
     const unsubscribe = onValue(productsRef, (snapshot) => {
-      const data = snapshot.val() || {};
+      const data = snapshot.val() || {}; // fallback to empty object if offline
       const productsArray = Object.keys(data).map((key) => ({
         id: key,
         ...data[key],
@@ -39,127 +26,197 @@ export function ProductManager() {
       setProducts(productsArray);
     });
 
-    return () => unsubscribe();
+    return () => unsubscribe(); // cleanup
   }, []);
 
-  // ➕ Add
-  const addProduct = () => {
+  // -------------------
+  // Add a new product
+  // -------------------
+  const addProduct = (productData) => {
+    push(productsRef, productData);
+  };
+
+  // -------------------
+  // Update an existing product
+  // -------------------
+  const updateProduct = (id, productData) => {
+    const productRef = child(productsRef, id);
+    update(productRef, productData);
+  };
+
+  // -------------------
+  // Delete a product
+  // -------------------
+  const deleteProduct = (id) => {
+    const productRef = child(productsRef, id);
+    remove(productRef);
+  };
+
+  // -------------------
+  // Handle form submit
+  // -------------------
+  const handleSubmit = (e) => {
+    e.preventDefault();
     if (!name || !price || !stock) return;
 
-    push(productsRef, {
+    const productData = {
       name,
-      price: Number(price),
-      stock: Number(stock),
-    });
+      price: parseFloat(price),
+      stock: parseInt(stock),
+    };
+
+    if (editingId) {
+      updateProduct(editingId, productData);
+      setEditingId(null);
+    } else {
+      addProduct(productData);
+    }
 
     setName("");
     setPrice("");
     setStock("");
   };
 
-  // ✏️ Update
-  const updateProduct = () => {
-    if (!editingId) return;
+  // -------------------
+  // Handle editing
+  // -------------------
+  const handleEdit = (product) => {
+    setEditingId(product.id);
+    setName(product.name);
+    setPrice(product.price.toString());
+    setStock(product.stock.toString());
+  };
 
-    update(child(productsRef, editingId), {
-      name,
-      price: Number(price),
-      stock: Number(stock),
-    });
-
+  const handleCancel = () => {
     setEditingId(null);
     setName("");
     setPrice("");
     setStock("");
   };
 
-  // 🗑 Delete
-  const deleteProduct = (id) => {
-    remove(child(productsRef, id));
-  };
-
-  const filteredProducts = products.filter((p) =>
-    p.name.toLowerCase().includes(search.toLowerCase())
+  const filteredProducts = products.filter((product) =>
+    product.name.toLowerCase().includes(search.toLowerCase())
   );
 
+  // -------------------
+  // Render UI
+  // -------------------
   return (
     <div className="card">
       <div className="card-header">
-        <h2>Product Management</h2>
-        {isOffline && <span className="offline-badge">Offline mode</span>}
+        <h2 className="card-title">Product Management</h2>
       </div>
 
       <div className="card-content">
-        {/* FORM */}
-        <div className="product-form">
-          <input
-            className="input"
-            placeholder="Product name"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-          />
+        {/* Product Form */}
+        <form onSubmit={handleSubmit} className="product-form">
+          <div className="form-group">
+            <label>Product Name</label>
+            <input
+              className="input"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Enter product name"
+              required
+            />
+          </div>
 
-          <input
-            className="input"
-            type="number"
-            placeholder="Price (KSh)"
-            value={price}
-            onChange={(e) => setPrice(e.target.value)}
-          />
+          <div className="grid-2 gap-4">
+            <div className="form-group">
+              <label>Price (ksh)</label>
+              <input
+                className="input"
+                type="number"
+                step="0.01"
+                value={price}
+                onChange={(e) => setPrice(e.target.value)}
+                placeholder="0.00"
+                required
+              />
+            </div>
 
-          <input
-            className="input"
-            type="number"
-            placeholder="Stock"
-            value={stock}
-            onChange={(e) => setStock(e.target.value)}
-          />
+            <div className="form-group">
+              <label>Stock</label>
+              <input
+                className="input"
+                type="number"
+                value={stock}
+                onChange={(e) => setStock(e.target.value)}
+                placeholder="0"
+                required
+              />
+            </div>
+          </div>
 
-          <button
-            className="btn btn-primary"
-            onClick={editingId ? updateProduct : addProduct}
-          >
-            {editingId ? "Update Product" : "Add Product"}
-          </button>
-        </div>
+          {/* Search */}
+          <div className="form-group">
+            <label>Search Products</label>
+            <div className="search-input">
+              <Search className="icon" />
+              <input
+                className="input"
+                type="text"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search by product name..."
+              />
+            </div>
+          </div>
 
-        {/* SEARCH */}
-        <div className="search-input">
-          <Search className="icon" />
-          <input
-            className="input"
-            placeholder="Search product..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
-        </div>
+          <div className="form-actions">
+            <button type="submit" className="btn btn-primary">
+              {editingId ? (
+                <>
+                  <Pencil className="icon" />
+                  Update Product
+                </>
+              ) : (
+                <>
+                  <Plus className="icon" />
+                  Add Product
+                </>
+              )}
+            </button>
 
-        {/* LIST */}
+            {editingId && (
+              <button
+                type="button"
+                className="btn btn-outline"
+                onClick={handleCancel}
+              >
+                Cancel
+              </button>
+            )}
+          </div>
+        </form>
+
+        {/* Product List */}
         <div className="product-list">
           {filteredProducts.length === 0 ? (
-            <p>No products</p>
+            <p className="empty-text">No products found.</p>
           ) : (
-            filteredProducts.map((p) => (
-              <div key={p.id} className="product-item">
-                <div>
-                  <strong>{p.name}</strong>
-                  <p>KSh {p.price} · Stock {p.stock}</p>
+            filteredProducts.map((product) => (
+              <div key={product.id} className="product-item">
+                <div className="product-info">
+                  <p className="product-name">{product.name}</p>
+                  <p className="product-details">
+                    ksh{product.price.toFixed(2)} · Stock: {product.stock}
+                  </p>
                 </div>
 
-                <div>
+                <div className="product-actions">
                   <button
-                    onClick={() => {
-                      setEditingId(p.id);
-                      setName(p.name);
-                      setPrice(p.price);
-                      setStock(p.stock);
-                    }}
+                    className="btn btn-outline btn-small"
+                    onClick={() => handleEdit(product)}
                   >
-                    <Pencil size={16} />
+                    <Pencil className="icon" />
                   </button>
 
-                  <button onClick={() => deleteProduct(p.id)}>
-                    <Trash2 size={16} />
+                  <button
+                    className="btn btn-outline btn-small btn-danger"
+                    onClick={() => deleteProduct(product.id)}
+                  >
+                    <Trash2 className="icon" />
                   </button>
                 </div>
               </div>
