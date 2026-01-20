@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from "react";
 import { Pencil, Trash2, Plus, Search } from "lucide-react";
 import "../index.css";
-import { db, productsRef, salesRef } from "../firebase"; // make sure salesRef is exported from firebase.js
+import { productsRef } from "../firebase";
 import { onValue, push, update, remove, child } from "firebase/database";
 
 export function ProductManager() {
@@ -13,12 +13,12 @@ export function ProductManager() {
   const [search, setSearch] = useState("");
   const [editingId, setEditingId] = useState(null);
 
-  // -------------------
-  // Fetch products from Firebase
-  // -------------------
+  /* =========================
+     FETCH PRODUCTS (REALTIME)
+  ========================== */
   useEffect(() => {
     const unsubscribe = onValue(productsRef, (snapshot) => {
-      const data = snapshot.val() || {}; // fallback if offline
+      const data = snapshot.val() || {};
       const productsArray = Object.keys(data).map((key) => ({
         id: key,
         ...data[key],
@@ -29,112 +29,81 @@ export function ProductManager() {
     return () => unsubscribe();
   }, []);
 
-  // -------------------
-  // Add a new product
-  // -------------------
-  const addProduct = (productData) => {
-    push(productsRef, productData);
+  /* =========================
+     ADD PRODUCT
+  ========================== */
+  const addProduct = () => {
+    push(productsRef, {
+      name,
+      price: Number(price),
+      stock: Number(stock),
+    });
+
+    resetForm();
   };
 
-  // -------------------
-  // Update an existing product
-  // -------------------
-  const updateProduct = (id, productData) => {
-    const productRef = child(productsRef, id);
-    update(productRef, productData);
+  /* =========================
+     UPDATE PRODUCT
+  ========================== */
+  const updateProduct = () => {
+    const productRef = child(productsRef, editingId);
+    update(productRef, {
+      name,
+      price: Number(price),
+      stock: Number(stock),
+    });
+
+    resetForm();
   };
 
-  // -------------------
-  // Delete a product
-  // -------------------
+  /* =========================
+     DELETE PRODUCT
+  ========================== */
   const deleteProduct = (id) => {
     const productRef = child(productsRef, id);
     remove(productRef);
   };
 
-  // -------------------
-  // Sell a product
-  // -------------------
-  const handleSell = (product) => {
-    if (product.stock <= 0) return; // can't sell if out of stock
-
-    const newStock = product.stock - 1;
-
-    // Update local state immediately
-    setProducts((prev) =>
-      prev.map((p) => (p.id === product.id ? { ...p, stock: newStock } : p))
-    );
-
-    // Update Firebase
-    const productRef = child(productsRef, product.id);
-    update(productRef, { stock: newStock });
-
-    // Record sale in /sales
-    if (salesRef) {
-      push(salesRef, {
-        productId: product.id,
-        name: product.name,
-        quantity: 1,
-        date: Date.now(),
-      });
-    }
-  };
-
-  // -------------------
-  // Handle form submit
-  // -------------------
+  /* =========================
+     FORM SUBMIT
+  ========================== */
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!name || !price || !stock) return;
 
-    const productData = {
-      name,
-      price: parseFloat(price),
-      stock: parseInt(stock),
-    };
-
-    if (editingId) {
-      updateProduct(editingId, productData);
-      setEditingId(null);
-    } else {
-      addProduct(productData);
-    }
-
-    setName("");
-    setPrice("");
-    setStock("");
+    editingId ? updateProduct() : addProduct();
   };
 
-  // -------------------
-  // Handle editing
-  // -------------------
+  /* =========================
+     EDIT PRODUCT
+  ========================== */
   const handleEdit = (product) => {
     setEditingId(product.id);
     setName(product.name || "");
-    setPrice(product.price !== undefined ? product.price.toString() : "");
-    setStock(product.stock !== undefined ? product.stock.toString() : "");
+    setPrice(product.price?.toString() || "");
+    setStock(product.stock?.toString() || "");
   };
 
-  const handleCancel = () => {
+  const resetForm = () => {
     setEditingId(null);
     setName("");
     setPrice("");
     setStock("");
   };
 
-  // -------------------
-  // Filter products safely
-  // -------------------
+  /* =========================
+     FILTER PRODUCTS
+  ========================== */
   const filteredProducts = products.filter(
-    (product) =>
-      product.name &&
-      typeof product.name === "string" &&
-      product.name.toLowerCase().includes(search.toLowerCase())
+    (p) =>
+      p.name &&
+      typeof p.name === "string" &&
+      p.name.toLowerCase().includes(search.toLowerCase())
   );
 
-  // -------------------
-  // Render UI
-  // -------------------
+  /* =========================
+     RENDER
+  ========================== */
   return (
     <div className="card">
       <div className="card-header">
@@ -142,7 +111,7 @@ export function ProductManager() {
       </div>
 
       <div className="card-content">
-        {/* Product Form */}
+        {/* FORM */}
         <form onSubmit={handleSubmit} className="product-form">
           <div className="form-group">
             <label>Product Name</label>
@@ -157,14 +126,13 @@ export function ProductManager() {
 
           <div className="grid-2 gap-4">
             <div className="form-group">
-              <label>Price (ksh)</label>
+              <label>Price (KSh)</label>
               <input
                 className="input"
                 type="number"
                 step="0.01"
                 value={price}
                 onChange={(e) => setPrice(e.target.value)}
-                placeholder="0.00"
                 required
               />
             </div>
@@ -176,23 +144,21 @@ export function ProductManager() {
                 type="number"
                 value={stock}
                 onChange={(e) => setStock(e.target.value)}
-                placeholder="0"
                 required
               />
             </div>
           </div>
 
-          {/* Search */}
+          {/* SEARCH */}
           <div className="form-group">
             <label>Search Products</label>
             <div className="search-input">
               <Search className="icon" />
               <input
                 className="input"
-                type="text"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search by product name..."
+                placeholder="Search by name..."
               />
             </div>
           </div>
@@ -201,13 +167,11 @@ export function ProductManager() {
             <button type="submit" className="btn btn-primary">
               {editingId ? (
                 <>
-                  <Pencil className="icon" />
-                  Update Product
+                  <Pencil className="icon" /> Update Product
                 </>
               ) : (
                 <>
-                  <Plus className="icon" />
-                  Add Product
+                  <Plus className="icon" /> Add Product
                 </>
               )}
             </button>
@@ -216,7 +180,7 @@ export function ProductManager() {
               <button
                 type="button"
                 className="btn btn-outline"
-                onClick={handleCancel}
+                onClick={resetForm}
               >
                 Cancel
               </button>
@@ -224,7 +188,7 @@ export function ProductManager() {
           </div>
         </form>
 
-        {/* Product List */}
+        {/* PRODUCT LIST */}
         <div className="product-list">
           {filteredProducts.length === 0 ? (
             <p className="empty-text">No products found.</p>
@@ -232,24 +196,13 @@ export function ProductManager() {
             filteredProducts.map((product) => (
               <div key={product.id} className="product-item">
                 <div className="product-info">
-                  <p className="product-name">{product.name || "Unnamed"}</p>
+                  <p className="product-name">{product.name}</p>
                   <p className="product-details">
-                    ksh
-                    {product.price !== undefined
-                      ? product.price.toFixed(2)
-                      : "0.00"}{" "}
-                    · Stock: {product.stock !== undefined ? product.stock : 0}
+                    KSh {product.price?.toFixed(2)} · Stock: {product.stock}
                   </p>
                 </div>
 
                 <div className="product-actions">
-                  <button
-                    className="btn btn-outline btn-small btn-success"
-                    onClick={() => handleSell(product)}
-                  >
-                    Sell
-                  </button>
-
                   <button
                     className="btn btn-outline btn-small"
                     onClick={() => handleEdit(product)}

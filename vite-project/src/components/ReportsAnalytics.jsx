@@ -1,87 +1,95 @@
 import React, { useMemo, useState } from "react";
 import { TrendingUp, TrendingDown, Trash2, Clock } from "lucide-react";
 import { ref, remove } from "firebase/database";
-import { db } from "../firebase"; // only db is needed
+import { db } from "../firebase";
 import "../index.css";
 
-export function ReportsAnalytics({ products = [], sales = [], setSales }) {
+export function ReportsAnalytics({ sales = [], setSales }) {
   const [showConfirm, setShowConfirm] = useState(false);
 
   /* =========================
-     CLEAR ALL DATA (Firebase version)
+     CLEAR ALL SALES (Firebase)
   ========================== */
   const clearAllData = async () => {
     try {
-      // Create a reference to the "sales" node in Firebase
       const salesRef = ref(db, "sales");
-
-      // Remove all sales from Firebase
       await remove(salesRef);
 
-      // Clear local state immediately
       if (typeof setSales === "function") {
         setSales([]);
       }
 
       setShowConfirm(false);
-      console.log("All sales cleared successfully.");
-    } catch (error) {
-      console.error("Error clearing sales:", error);
-      alert("Failed to clear sales. Check console.");
+      alert("All sales cleared successfully");
+    } catch (err) {
+      console.error(err);
+      alert("Failed to clear sales");
     }
   };
 
   /* =========================
-     ANALYTICS CALCULATIONS
+     ANALYTICS
   ========================== */
   const analytics = useMemo(() => {
-    const completedSales = (sales || []).filter((sale) => sale?.status === "COMPLETED");
+    const validSales = sales || [];
 
-    const soldGoods = [...completedSales].reverse();
+    const soldGoods = [...validSales].reverse();
 
-    const salesByProduct = completedSales.reduce((acc, sale) => {
-      const productId = sale?.productId ?? "unknown";
+    const salesByProduct = validSales.reduce((acc, sale) => {
+      const productId = sale.productId || "unknown";
+
       if (!acc[productId]) {
         acc[productId] = {
-          productName: sale?.productName || "Unknown",
+          productName: sale.name || "Unknown",
           quantitySold: 0,
           revenue: 0,
         };
       }
-      acc[productId].quantitySold += sale?.quantity ?? 0;
-      acc[productId].revenue += sale?.totalAmount ?? 0;
+
+      acc[productId].quantitySold += sale.quantity || 0;
+      acc[productId].revenue += (sale.price || 0) * (sale.quantity || 0);
+
       return acc;
     }, {});
 
-    const salesArray = Object.entries(salesByProduct).map(([productId, data]) => ({
-      productId,
-      ...data,
-    }));
+    const salesArray = Object.entries(salesByProduct).map(
+      ([productId, data]) => ({
+        productId,
+        ...data,
+      })
+    );
 
     salesArray.sort((a, b) => b.quantitySold - a.quantitySold);
 
-    const mostSold = salesArray.slice(0, 5);
-    const leastSold = salesArray.length > 5 ? salesArray.slice(-5).reverse() : [];
+    const totalRevenue = validSales.reduce(
+      (sum, sale) => sum + (sale.price || 0) * (sale.quantity || 0),
+      0
+    );
 
-    const totalRevenue = completedSales.reduce((sum, sale) => sum + (sale?.totalAmount ?? 0), 0);
-    const totalItemsSold = completedSales.reduce((sum, sale) => sum + (sale?.quantity ?? 0), 0);
+    const totalItemsSold = validSales.reduce(
+      (sum, sale) => sum + (sale.quantity || 0),
+      0
+    );
 
     return {
       soldGoods,
-      mostSold,
-      leastSold,
+      mostSold: salesArray.slice(0, 5),
+      leastSold:
+        salesArray.length > 5
+          ? salesArray.slice(-5).reverse()
+          : [],
       totalRevenue,
       totalItemsSold,
-      hasSales: completedSales.length > 0,
+      hasSales: validSales.length > 0,
     };
   }, [sales]);
 
   /* =========================
-     DATE FORMATTER
+     HELPERS
   ========================== */
   const formatDate = (date) =>
     date
-      ? new Date(date).toLocaleString("en-US", {
+      ? new Date(date).toLocaleString("en-KE", {
           year: "numeric",
           month: "short",
           day: "numeric",
@@ -90,11 +98,12 @@ export function ReportsAnalytics({ products = [], sales = [], setSales }) {
         })
       : "Unknown";
 
-  /* =========================
-     SAFE TOFIX HELPER
-  ========================== */
-  const safeToFixed = (num, decimals = 2) => (num ?? 0).toFixed(decimals);
+  const safeToFixed = (num, decimals = 2) =>
+    Number(num || 0).toFixed(decimals);
 
+  /* =========================
+     RENDER
+  ========================== */
   return (
     <div className="card">
       {/* HEADER */}
@@ -105,12 +114,12 @@ export function ReportsAnalytics({ products = [], sales = [], setSales }) {
         </button>
       </div>
 
-      {/* CONFIRM OVERLAY */}
+      {/* CONFIRM */}
       {showConfirm && (
         <div className="confirm-overlay">
           <div className="confirm-box">
             <h3>Clear All Sales Data?</h3>
-            <p>This action cannot be undone.</p>
+            <p>This action is permanent and cannot be reversed.</p>
             <div className="confirm-actions">
               <button className="btn cancel" onClick={() => setShowConfirm(false)}>
                 Cancel
@@ -130,7 +139,9 @@ export function ReportsAnalytics({ products = [], sales = [], setSales }) {
           <div className="stat-box total-revenue">
             <span className="icon stat-icon">KSh</span>
             <p>Total Revenue</p>
-            <p className="stat-value">ksh{safeToFixed(analytics.totalRevenue)}</p>
+            <p className="stat-value">
+              ksh{safeToFixed(analytics.totalRevenue)}
+            </p>
           </div>
 
           <div className="stat-box total-items">
@@ -144,8 +155,7 @@ export function ReportsAnalytics({ products = [], sales = [], setSales }) {
         {!analytics.hasSales ? (
           <div className="no-sales">
             <TrendingUp className="icon no-sales-icon" />
-            <p>No completed sales yet</p>
-            <p className="text-muted">Pending orders are not counted as sales</p>
+            <p>No sales recorded yet</p>
           </div>
         ) : (
           <>
@@ -155,16 +165,19 @@ export function ReportsAnalytics({ products = [], sales = [], setSales }) {
                 <Clock className="icon" />
                 <h3>Sold Goods</h3>
               </div>
+
               <div className="sold-goods-list scrollable">
                 {analytics.soldGoods.map((sale, index) => (
                   <div key={index} className="analytics-item">
                     <div>
-                      <p className="product-name">{sale?.productName ?? "Unknown"}</p>
+                      <p className="product-name">{sale.name}</p>
                       <p className="product-details">
-                        Qty: {sale?.quantity ?? 0} · {formatDate(sale?.createdAt)}
+                        Qty: {sale.quantity} · {formatDate(sale.date)}
                       </p>
                     </div>
-                    <p className="product-value">ksh{safeToFixed(sale?.totalAmount)}</p>
+                    <p className="product-value">
+                      ksh{safeToFixed(sale.price * sale.quantity)}
+                    </p>
                   </div>
                 ))}
               </div>
@@ -181,9 +194,13 @@ export function ReportsAnalytics({ products = [], sales = [], setSales }) {
                   <div key={item.productId} className="analytics-item most-sold">
                     <div>
                       <p className="product-name">{item.productName}</p>
-                      <p className="product-details">Sold: {item.quantitySold} units</p>
+                      <p className="product-details">
+                        Sold: {item.quantitySold} units
+                      </p>
                     </div>
-                    <p className="product-value">ksh{safeToFixed(item.revenue)}</p>
+                    <p className="product-value">
+                      ksh{safeToFixed(item.revenue)}
+                    </p>
                   </div>
                 ))}
               </div>
@@ -200,9 +217,13 @@ export function ReportsAnalytics({ products = [], sales = [], setSales }) {
                   <div key={item.productId} className="analytics-item least-sold">
                     <div>
                       <p className="product-name">{item.productName}</p>
-                      <p className="product-details">Sold: {item.quantitySold} units</p>
+                      <p className="product-details">
+                        Sold: {item.quantitySold} units
+                      </p>
                     </div>
-                    <p className="product-value">ksh{safeToFixed(item.revenue)}</p>
+                    <p className="product-value">
+                      ksh{safeToFixed(item.revenue)}
+                    </p>
                   </div>
                 ))}
               </div>
