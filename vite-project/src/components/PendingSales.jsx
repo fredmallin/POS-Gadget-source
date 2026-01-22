@@ -1,15 +1,14 @@
 // src/components/PendingSales.jsx
 import { useState } from "react";
-import { Clock, CheckCircle, XCircle, Plus } from "lucide-react";
-import { Search } from "lucide-react";
+import { Clock, CheckCircle, XCircle, Plus, Search } from "lucide-react";
 import "../index.css";
 
 export function PendingSales({
   products = [],
   pendingOrders = [],
-  onHoldOrder,
-  onCompleteOrder,
-  onCancelOrder
+  onHoldOrder = () => {},
+  onCompleteOrder = () => {},
+  onCancelOrder = () => {}
 }) {
   const [selectedProductId, setSelectedProductId] = useState("");
   const [quantity, setQuantity] = useState("1");
@@ -24,7 +23,7 @@ export function PendingSales({
   // -------------------
   const filteredProducts = products.filter(
     (p) =>
-      p.name && typeof p.name === "string" &&
+      p?.name &&
       p.name.toLowerCase().includes(productSearch.toLowerCase())
   );
 
@@ -33,25 +32,39 @@ export function PendingSales({
   // -------------------
   const handleHoldOrder = (e) => {
     e.preventDefault();
-    if (!selectedProductId || !customerName) return;
 
-    const qty = parseInt(quantity);
+    if (!selectedProductId) {
+      alert("Please select a product");
+      return;
+    }
+
+    if (!customerName.trim()) {
+      alert("Please enter customer name");
+      return;
+    }
+
+    const qty = Number(quantity);
     if (qty <= 0) return;
 
     const product = products.find(p => p.id === selectedProductId);
-    if (!product || !product.price) return;
+    if (!product) return;
+
+    if (qty > product.stock) {
+      alert("Not enough stock");
+      return;
+    }
 
     onHoldOrder({
       id: Date.now().toString(),
       productId: product.id,
-      productName: product.name || "Unknown",
+      productName: product.name,
       quantity: qty,
-      totalAmount: (product.price || 0) * qty,
+      totalAmount: product.price * qty,
       customerName,
-      notes: notes || undefined,
+      notes: notes || "",
       createdAt: new Date().toISOString(),
       paid: 0,
-      balance: (product.price || 0) * qty,
+      balance: product.price * qty,
       status: "PENDING"
     });
 
@@ -87,7 +100,7 @@ export function PendingSales({
             />
           </div>
 
-          {/* 🔹 SEARCH RESULTS */}
+          {/* SEARCH RESULTS */}
           {productSearch && filteredProducts.length > 0 && (
             <ul className="search-results">
               {filteredProducts.map((p) => (
@@ -96,10 +109,10 @@ export function PendingSales({
                   className={p.id === selectedProductId ? "selected" : ""}
                   onClick={() => {
                     setSelectedProductId(p.id);
-                    setProductSearch(p.name || ""); // safe fallback
+                    setProductSearch(p.name);
                   }}
                 >
-                  {p.name || "Unnamed"} - ksh{(p.price || 0).toFixed(2)} (Stock: {p.stock || 0})
+                  {p.name} — ksh{p.price.toFixed(2)} (Stock: {p.stock})
                 </li>
               ))}
             </ul>
@@ -130,11 +143,11 @@ export function PendingSales({
             onChange={(e) => setNotes(e.target.value)}
           />
 
-          {selectedProduct && selectedProduct.price != null && (
+          {selectedProduct && (
             <div className="total-box">
               <p>Total Amount</p>
               <strong>
-                ksh{((selectedProduct.price || 0) * parseInt(quantity || 0)).toFixed(2)}
+                ksh{(selectedProduct.price * Number(quantity)).toFixed(2)}
               </strong>
             </div>
           )}
@@ -155,31 +168,24 @@ export function PendingSales({
             <p className="empty">No pending orders</p>
           ) : (
             pendingOrders.map((order) => {
-              const product = products.find((p) => p.id === order.productId);
-              const hasStock = product && product.stock >= (order.quantity || 0);
+              const product = products.find(p => p.id === order.productId);
+              const hasStock = product && product.stock >= order.quantity;
 
               return (
                 <div className="order-item" key={order.id}>
                   <div className="order-top">
                     <div>
-                      <p className="bold">{order.productName || "Unknown Product"}</p>
-                      <p>Customer: {order.customerName || "Unknown"}</p>
-                      <p>
-                        Quantity: {order.quantity || 0} × ksh
-                        {order.totalAmount && order.quantity
-                          ? (order.totalAmount / order.quantity).toFixed(2)
-                          : "0.00"}
-                      </p>
+                      <p className="bold">{order.productName}</p>
+                      <p>Customer: {order.customerName}</p>
+                      <p>Qty: {order.quantity}</p>
                       {order.notes && <p className="note">Note: {order.notes}</p>}
                       <p className="time">
-                        Held: {order.createdAt
-                          ? new Date(order.createdAt).toLocaleString()
-                          : "Unknown"}
+                        {new Date(order.createdAt).toLocaleString()}
                       </p>
                     </div>
 
                     <div className="amount">
-                      <p>ksh{order.totalAmount ? order.totalAmount.toFixed(2) : "0.00"}</p>
+                      <p>ksh{order.totalAmount.toFixed(2)}</p>
                       {!hasStock && <span className="badge danger">Low Stock</span>}
                     </div>
                   </div>
