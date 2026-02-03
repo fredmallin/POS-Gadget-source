@@ -4,7 +4,7 @@ import { ref, remove } from "firebase/database";
 import { db } from "../firebase";
 import "../index.css";
 
-export function ReportsAnalytics({ sales = [], setSales }) {
+export default function ReportsAnalytics({ sales = [], setSales }) {
   const [showConfirm, setShowConfirm] = useState(false);
 
   /* =========================

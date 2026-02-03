@@ -2,14 +2,23 @@
 import React, { useState, useEffect } from "react";
 import { Pencil, Trash2, Plus, Search } from "lucide-react";
 import "../index.css";
-import { productsRef } from "../firebase";
-import { onValue, push, update, remove, child } from "firebase/database";
 
-export function ProductManager() {
+import { productsRef, storage } from "../firebase";
+import { onValue, push, update, remove, child } from "firebase/database";
+import {
+  ref as storageRef,
+  uploadBytes,
+  getDownloadURL,
+} from "firebase/storage";
+
+export default function ProductManager() {
   const [products, setProducts] = useState([]);
+
   const [name, setName] = useState("");
   const [price, setPrice] = useState("");
   const [stock, setStock] = useState("");
+  const [imageFile, setImageFile] = useState(null);
+
   const [search, setSearch] = useState("");
   const [editingId, setEditingId] = useState(null);
 
@@ -32,11 +41,23 @@ export function ProductManager() {
   /* =========================
      ADD PRODUCT
   ========================== */
-  const addProduct = () => {
+  const addProduct = async () => {
+    let imageUrl = "";
+
+    if (imageFile) {
+      const imgRef = storageRef(
+        storage,
+        `products/${Date.now()}_${imageFile.name}`
+      );
+      await uploadBytes(imgRef, imageFile);
+      imageUrl = await getDownloadURL(imgRef);
+    }
+
     push(productsRef, {
       name,
       price: Number(price),
       stock: Number(stock),
+      imageUrl,
     });
 
     resetForm();
@@ -45,14 +66,26 @@ export function ProductManager() {
   /* =========================
      UPDATE PRODUCT
   ========================== */
-  const updateProduct = () => {
+  const updateProduct = async () => {
     const productRef = child(productsRef, editingId);
-    update(productRef, {
+
+    let updates = {
       name,
       price: Number(price),
       stock: Number(stock),
-    });
+    };
 
+    if (imageFile) {
+      const imgRef = storageRef(
+        storage,
+        `products/${Date.now()}_${imageFile.name}`
+      );
+      await uploadBytes(imgRef, imageFile);
+      const imageUrl = await getDownloadURL(imgRef);
+      updates.imageUrl = imageUrl;
+    }
+
+    update(productRef, updates);
     resetForm();
   };
 
@@ -82,6 +115,7 @@ export function ProductManager() {
     setName(product.name || "");
     setPrice(product.price?.toString() || "");
     setStock(product.stock?.toString() || "");
+    setImageFile(null);
   };
 
   const resetForm = () => {
@@ -89,6 +123,7 @@ export function ProductManager() {
     setName("");
     setPrice("");
     setStock("");
+    setImageFile(null);
   };
 
   /* =========================
@@ -121,6 +156,16 @@ export function ProductManager() {
               onChange={(e) => setName(e.target.value)}
               placeholder="Enter product name"
               required
+            />
+          </div>
+
+          <div className="form-group">
+            <label>Product Image</label>
+            <input
+              type="file"
+              accept="image/*"
+              className="input"
+              onChange={(e) => setImageFile(e.target.files[0])}
             />
           </div>
 
@@ -195,6 +240,14 @@ export function ProductManager() {
           ) : (
             filteredProducts.map((product) => (
               <div key={product.id} className="product-item">
+                {product.imageUrl && (
+                  <img
+                    src={product.imageUrl}
+                    alt={product.name}
+                    className="product-image"
+                  />
+                )}
+
                 <div className="product-info">
                   <p className="product-name">{product.name}</p>
                   <p className="product-details">

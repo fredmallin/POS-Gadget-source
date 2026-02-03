@@ -1,24 +1,31 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { AlertTriangle, Package } from 'lucide-react';
 import '../index.css';
 
-export function InventoryMonitor({ products }) {
+export default function InventoryMonitor({ products }) {
   const LOW_STOCK_THRESHOLD = 4;
 
-  // Total inventory value safely (handles missing or string values)
-  const totalValue = products.reduce(
-    (sum, p) => sum + (Number(p.price || 0) * Number(p.stock || 0)),
-    0
-  );
+  // Memoized totals for performance
+  const totalValue = useMemo(() => {
+    return products.reduce((sum, p) => sum + (Number(p.price || 0) * Number(p.stock || 0)), 0);
+  }, [products]);
 
-  // Total stock
-  const totalStock = products.reduce(
-    (sum, p) => sum + Number(p.stock || 0),
-    0
-  );
+  const totalStock = useMemo(() => {
+    return products.reduce((sum, p) => sum + Number(p.stock || 0), 0);
+  }, [products]);
 
-  // Low stock products
-  const lowStockProducts = products.filter(p => Number(p.stock || 0) <= LOW_STOCK_THRESHOLD);
+  const lowStockProducts = useMemo(() => {
+    return products.filter(p => Number(p.stock || 0) <= LOW_STOCK_THRESHOLD);
+  }, [products]);
+
+  // Sort products: low stock first
+  const sortedProducts = useMemo(() => {
+    return [...products].sort((a, b) => Number(a.stock || 0) - Number(b.stock || 0));
+  }, [products]);
+
+  // Helper: format currency
+  const formatCurrency = (value) =>
+    value.toLocaleString('en-KE', { style: 'currency', currency: 'KES' });
 
   return (
     <div className="card shadow">
@@ -36,13 +43,13 @@ export function InventoryMonitor({ products }) {
           </div>
           <div className="stat-box total-value">
             <p>Total Inventory Value</p>
-            <p>ksh{totalValue.toFixed(2)}</p>
+            <p>{formatCurrency(totalValue)}</p>
           </div>
         </div>
 
         {/* LOW STOCK ALERT */}
         {lowStockProducts.length > 0 && (
-          <div className="low-stock-alert mb-4">
+          <div className="low-stock-alert mb-4" aria-live="polite">
             <div className="alert-header">
               <AlertTriangle className="icon alert-icon" />
               <p>Low Stock Alert</p>
@@ -53,35 +60,39 @@ export function InventoryMonitor({ products }) {
           </div>
         )}
 
-        {/* PRODUCT LIST */}
-        <div className="product-list">
-          {products.map((product) => {
-            const stock = Number(product.stock || 0);
-            const price = Number(product.price || 0);
-            const isLowStock = stock <= LOW_STOCK_THRESHOLD;
-            const stockValue = price * stock;
+        {/* EMPTY STATE */}
+        {products.length === 0 ? (
+          <p>No products in inventory.</p>
+        ) : (
+          <div className="product-list">
+            {sortedProducts.map((product) => {
+              const stock = Number(product.stock || 0);
+              const price = Number(product.price || 0);
+              const isLowStock = stock <= LOW_STOCK_THRESHOLD;
+              const stockValue = price * stock;
 
-            return (
-              <div
-                key={product.id}
-                className={`product-item ${isLowStock ? 'low-stock' : ''}`}
-              >
-                <div className="product-info">
-                  <Package className={`icon ${isLowStock ? 'alert-icon' : 'normal-icon'}`} />
-                  <div>
-                    <p className={isLowStock ? 'product-name alert-text' : 'product-name'}>
-                      {product.name}
-                    </p>
-                    <p className="product-details">
-                      Stock: {stock} · Value: ksh{stockValue.toFixed(2)}
-                    </p>
+              return (
+                <div
+                  key={product.id}
+                  className={`product-item ${isLowStock ? 'low-stock' : ''}`}
+                >
+                  <div className="product-info">
+                    <Package className={`icon ${isLowStock ? 'alert-icon' : 'normal-icon'}`} />
+                    <div>
+                      <p className={isLowStock ? 'product-name alert-text' : 'product-name'}>
+                        {product.name}
+                      </p>
+                      <p className="product-details">
+                        Stock: {stock} · Value: {formatCurrency(stockValue)}
+                      </p>
+                    </div>
                   </div>
+                  {isLowStock && <span className="badge">Low Stock</span>}
                 </div>
-                {isLowStock && <span className="badge">Low Stock</span>}
-              </div>
-            );
-          })}
-        </div>
+              );
+            })}
+          </div>
+        )}
       </div>
     </div>
   );

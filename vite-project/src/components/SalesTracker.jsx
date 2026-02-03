@@ -5,7 +5,7 @@ import "../index.css";
 import { productsRef, salesRef, db } from "../firebase";
 import { update, push, child, get } from "firebase/database";
 
-export function SalesTracker({ products = [] }) {
+export default function SalesTracker({ products = [] }) {
   const [search, setSearch] = useState("");
   const [cart, setCart] = useState([]);
 
