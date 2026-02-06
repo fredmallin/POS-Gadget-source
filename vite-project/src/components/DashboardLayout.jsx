@@ -1,20 +1,34 @@
 import React, { useState } from 'react';
-import { LayoutDashboard, ShoppingCart, ShoppingBag, Clock, PackagePlus, Package, Search, Warehouse, AlertTriangle, Lock, SlidersHorizontal, BarChart3, LogOut, Menu, X, PackageSearch } from 'lucide-react';
-import './DashboardLayout.css';
+import { useAuth } from '../contexts/AuthContext';
+import '../index.css';
+import {
+  LayoutDashboard,
+  ShoppingCart,
+  Package,
+  Warehouse,
+  Settings,
+  BarChart3,
+  LogOut,
+  Menu,
+  X,
+  ShoppingBag,
+  Clock,
+  PackagePlus,
+  Search,
+  PackageSearch,
+  AlertTriangle,
+  Lock,
+  SlidersHorizontal,
+} from 'lucide-react';
 
-export const DashboardLayout = ({ children }) => {
+export const DashboardLayout = ({ children, activeItem, onMenuItemClick }) => {
+  const { user, logout, isAdmin } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [activeItem, setActiveItem] = useState('dashboard');
-
-  const user = { name: 'John Doe', role: 'admin' };
-  const isAdmin = true;
 
   const navSections = [
     {
       title: 'Main',
-      items: [
-        { id: 'dashboard', label: 'Dashboard', icon: <LayoutDashboard /> },
-      ],
+      items: [{ id: 'dashboard', label: 'Dashboard', icon: <LayoutDashboard /> }],
     },
     {
       title: 'Sales',
@@ -63,29 +77,27 @@ export const DashboardLayout = ({ children }) => {
     }))
     .filter(section => section.items.length > 0);
 
-  const handleLogout = () => alert('Logout clicked');
-
   return (
     <div className="dashboard-container">
       {/* Sidebar */}
       <aside className={`sidebar ${sidebarOpen ? 'open' : 'closed'}`}>
         <div className="sidebar-header">
           <div className="logo">
-            <ShoppingCart className="logo-icon" />
+            <ShoppingCart className="icon-white" />
             <span>POS System</span>
           </div>
         </div>
 
-        <div className="sidebar-nav">
+        <div className="sidebar-menu">
           {filteredSections.map((section, idx) => (
-            <div key={idx} className="nav-section">
-              <h3>{section.title}</h3>
+            <div key={idx} className="menu-section">
+              <h4 className="section-title">{section.title}</h4>
               <nav>
                 {section.items.map(item => (
                   <button
                     key={item.id}
-                    className={`nav-item ${activeItem === item.id ? 'active' : ''}`}
-                    onClick={() => setActiveItem(item.id)}
+                    className={`menu-item ${activeItem === item.id ? 'active' : ''}`}
+                    onClick={() => onMenuItemClick(item.id)}
                   >
                     {item.icon}
                     <span>{item.label}</span>
@@ -98,22 +110,24 @@ export const DashboardLayout = ({ children }) => {
 
         <div className="sidebar-footer">
           <div className="user-info">
-            <p>{user.name}</p>
-            <p>{user.role}</p>
+            <p>{user?.name}</p>
+            <p className="user-role">{user?.role}</p>
           </div>
-          <button className="logout-btn" onClick={handleLogout}>
-            <LogOut /> Logout
+          <button className="logout-btn" onClick={logout}>
+            <LogOut />
+            Logout
           </button>
         </div>
       </aside>
 
-      {/* Main content */}
+      {/* Main Content */}
       <div className="main-content">
-        <header>
-          <button className="toggle-btn" onClick={() => setSidebarOpen(!sidebarOpen)}>
+        {/* Header */}
+        <header className="main-header">
+          <button className="toggle-sidebar-btn" onClick={() => setSidebarOpen(!sidebarOpen)}>
             {sidebarOpen ? <X /> : <Menu />}
           </button>
-          <div className="date">
+          <div className="date-display">
             {new Date().toLocaleDateString('en-US', {
               weekday: 'long',
               year: 'numeric',
@@ -123,7 +137,8 @@ export const DashboardLayout = ({ children }) => {
           </div>
         </header>
 
-        <main>{children}</main>
+        {/* Page Content */}
+        <main className="page-content">{children}</main>
       </div>
     </div>
   );

@@ -1,6 +1,8 @@
 // src/firebase.js
 import { initializeApp } from "firebase/app";
 import { getDatabase, ref, enableLogging } from "firebase/database";
+import { getStorage } from "firebase/storage";
+
 
 // -------------------
 // Your Firebase config
@@ -42,3 +44,5 @@ export const salesRef = ref(db, "sales"); // <-- add this
 // -------------------
 // import { connectDatabaseEmulator } from "firebase/database";
 // connectDatabaseEmulator(db, "localhost", 9000);
+
+export const storage = getStorage(app, "gs://gadget-source-pos.appspot.com");
