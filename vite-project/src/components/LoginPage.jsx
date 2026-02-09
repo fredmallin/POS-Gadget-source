@@ -21,7 +21,7 @@ export const LoginPage = () => {
     try {
       const success = await login(username, password); // login calls backend
       if (success) {
-        navigate("/dashboard"); // redirect to POS dashboard
+        navigate("/dashboard"); // redirect to dashboard
       } else {
         setError("Invalid username or password");
       }
@@ -89,10 +89,7 @@ export const LoginPage = () => {
           <div className="demo-credentials">
             <p className="demo-title">Demo Credentials:</p>
             <p>
-              <strong>Admin:</strong> admin / admin123
-            </p>
-            <p>
-              <strong>Cashier:</strong> cashier / cashier123
+              <strong>User:</strong> testuser / test123
             </p>
           </div>
         </form>

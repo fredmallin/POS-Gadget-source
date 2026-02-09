@@ -15,7 +15,8 @@ const ChangePassword = () => {
 
   const [error, setError] = useState('');
 
-  const handleSubmit = (e) => {
+  // ===== Updated handleSubmit for async backend call =====
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
 
@@ -29,20 +30,14 @@ const ChangePassword = () => {
       return;
     }
 
-    const success = changePassword(
-      formData.oldPassword,
-      formData.newPassword
-    );
+    // Call async changePassword from AuthContext
+    const result = await changePassword(formData.oldPassword, formData.newPassword);
 
-    if (success) {
-      toast.success('Password changed successfully!');
-      setFormData({
-        oldPassword: '',
-        newPassword: '',
-        confirmPassword: '',
-      });
+    if (result.success) {
+      toast.success(result.message || 'Password changed successfully!');
+      setFormData({ oldPassword: '', newPassword: '', confirmPassword: '' });
     } else {
-      setError('Current password is incorrect');
+      setError(result.message || 'Current password is incorrect');
     }
   };
 
@@ -62,7 +57,7 @@ const ChangePassword = () => {
 
         <div className="card-content">
           <div className="user-info">
-            <strong>Current User:</strong> {user?.name} ({user?.username})
+            <strong>Current User:</strong> {user?.name || user?.username}
           </div>
 
           <form onSubmit={handleSubmit}>
@@ -98,10 +93,7 @@ const ChangePassword = () => {
                 type="password"
                 value={formData.confirmPassword}
                 onChange={(e) =>
-                  setFormData({
-                    ...formData,
-                    confirmPassword: e.target.value,
-                  })
+                  setFormData({ ...formData, confirmPassword: e.target.value })
                 }
                 placeholder="Re-enter new password"
                 required
