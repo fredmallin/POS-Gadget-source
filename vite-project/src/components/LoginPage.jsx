@@ -1,21 +1,35 @@
-import React, { useState } from 'react';
-import '../index.css';
-import { ShoppingCart, AlertCircle } from 'lucide-react';
-import { useAuth } from '../contexts/AuthContext';
+import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import "../index.css";
+import { ShoppingCart, AlertCircle } from "lucide-react";
+import { useAuth } from "../contexts/AuthContext";
 
 export const LoginPage = () => {
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
-  const { login } = useAuth();
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  const handleSubmit = (e) => {
+  const { login } = useAuth(); // login function from AuthContext
+  const navigate = useNavigate();
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    setError('');
+    setError("");
+    setLoading(true);
 
-    const success = login(username, password);
-    if (!success) {
-      setError('Invalid username or password');
+    try {
+      const success = await login(username, password); // login calls backend
+      if (success) {
+        navigate("/dashboard"); // redirect to POS dashboard
+      } else {
+        setError("Invalid username or password");
+      }
+    } catch (err) {
+      console.error(err);
+      setError("Something went wrong. Please try again.");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -27,7 +41,9 @@ export const LoginPage = () => {
             <ShoppingCart className="icon-white" />
           </div>
           <h1 className="login-title">POS System</h1>
-          <p className="login-description">Sign in to access the point of sale system</p>
+          <p className="login-description">
+            Sign in to access the point of sale system
+          </p>
         </div>
 
         <form onSubmit={handleSubmit} className="login-form">
@@ -62,14 +78,22 @@ export const LoginPage = () => {
             </div>
           )}
 
-          <button type="submit" className="btn-submit">
-            Sign In
+          <button type="submit" className="btn-submit" disabled={loading}>
+            {loading ? "Signing In..." : "Sign In"}
           </button>
+
+          <div className="forgot-password">
+            <a href="/forgot-password">Forgot Password?</a>
+          </div>
 
           <div className="demo-credentials">
             <p className="demo-title">Demo Credentials:</p>
-            <p><strong>Admin:</strong> admin / admin123</p>
-            <p><strong>Cashier:</strong> cashier / cashier123</p>
+            <p>
+              <strong>Admin:</strong> admin / admin123
+            </p>
+            <p>
+              <strong>Cashier:</strong> cashier / cashier123
+            </p>
           </div>
         </form>
       </div>
