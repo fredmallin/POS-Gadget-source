@@ -14,7 +14,7 @@ app.config["SECRET_KEY"] = "supersecretkey"
 # ---------------- CORS ----------------
 CORS(
     app,
-    resources={r"/api/*": {"origins": "https://pos-gadget-source-c5lo.vercel.app/"}},
+    resources={r"/api/*": {"origins": "https://pos-gadget-source-c5lo.vercel.app"}},
     supports_credentials=True
 )
 
