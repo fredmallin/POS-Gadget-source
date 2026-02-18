@@ -38,7 +38,7 @@ export const PendingOrders = () => {
   }, [user, setUser, setToken]);
 
   const filteredProducts = products.filter(p =>
-    p.name.toLowerCase().includes(productSearch.toLowerCase())
+    p?.name?.toLowerCase().includes(productSearch.toLowerCase())
   );
 
   const handleAddItem = () => {
@@ -65,11 +65,13 @@ export const PendingOrders = () => {
       toast.error("User not found. Please login again.");
       return;
     }
+    if (!orderId) return toast.error("Invalid order");
     completePendingOrder(orderId);
     toast.success("Order completed");
   };
 
   const handleCancelOrder = (orderId) => {
+    if (!orderId) return toast.error("Invalid order");
     cancelPendingOrder(orderId);
     toast("Order canceled");
   };
@@ -110,12 +112,15 @@ export const PendingOrders = () => {
       {/* Product List */}
       {productSearch && !selectedProduct && (
         <ul className="product-search-list">
-          {filteredProducts.map(p => (
-            <li key={p.id} onClick={() => setSelectedProduct(p)}>
-              {p.name} - ${p.price.toFixed(2)} (Stock: {p.stock})
-            </li>
-          ))}
-          {filteredProducts.length === 0 && <li>No products found</li>}
+          {filteredProducts.length > 0 ? (
+            filteredProducts.map(p => (
+              <li key={p.id} onClick={() => setSelectedProduct(p)}>
+                {p.name} - ${p.price?.toFixed(2) || "0.00"} (Stock: {p.stock || 0})
+              </li>
+            ))
+          ) : (
+            <li>No products found</li>
+          )}
         </ul>
       )}
 
@@ -127,7 +132,7 @@ export const PendingOrders = () => {
             type="number"
             min="1"
             value={quantity}
-            onChange={(e) => setQuantity(parseInt(e.target.value))}
+            onChange={(e) => setQuantity(parseInt(e.target.value) || 1)}
           />
           <button onClick={handleAddItem}>Add Item</button>
         </div>
@@ -150,8 +155,8 @@ export const PendingOrders = () => {
       )}
 
       {/* Pending Orders Table */}
-      <h2>Pending Orders ({pendingOrders.length})</h2>
-      {pendingOrders.length === 0 ? (
+      <h2>Pending Orders ({pendingOrders?.length || 0})</h2>
+      {pendingOrders?.length === 0 ? (
         <p>No pending orders yet.</p>
       ) : (
         <table className="pending-orders-table">
@@ -164,31 +169,32 @@ export const PendingOrders = () => {
             </tr>
           </thead>
           <tbody>
-            {pendingOrders.map(order => (
-  <tr key={order?.id || Math.random()}>
-    <td>{order?.customerName || "Unknown"}</td>
-    <td>${order?.total?.toFixed(2) || "0.00"}</td>
-    <td>{order?.date ? new Date(order.date).toLocaleString() : "-"}</td>
-    <td>
-      <button
-        onClick={() => order?.id && handleCompleteOrder(order)}
-        className="btn complete"
-        disabled={!order?.id}
-      >
-        <CheckCircle /> Complete
-      </button>
+            {pendingOrders
+              .filter(Boolean) // remove null entries
+              .map(order => (
+                <tr key={order.id}>
+                  <td>{order.customerName || "Unknown"}</td>
+                  <td>${order.total?.toFixed(2) || "0.00"}</td>
+                  <td>{order.date ? new Date(order.date).toLocaleString() : "-"}</td>
+                  <td>
+                    <button
+                      onClick={() => handleCompleteOrder(order.id)}
+                      className="btn complete"
+                      disabled={!order.id}
+                    >
+                      <CheckCircle /> Complete
+                    </button>
 
-      <button
-        onClick={() => order?.id && handleCancelOrder(order)}
-        className="btn cancel"
-        disabled={!order?.id}
-      >
-        <XCircle /> Cancel
-      </button>
-    </td>
-  </tr>
-))}
-
+                    <button
+                      onClick={() => handleCancelOrder(order.id)}
+                      className="btn cancel"
+                      disabled={!order.id}
+                    >
+                      <XCircle /> Cancel
+                    </button>
+                  </td>
+                </tr>
+              ))}
           </tbody>
         </table>
       )}
