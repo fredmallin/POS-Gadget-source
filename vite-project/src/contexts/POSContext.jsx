@@ -6,37 +6,38 @@ export const POSProvider = ({ children }) => {
   const API_URL = "https://pos-gadget-source-4.onrender.com/api";
 
   /* ---------------- State ---------------- */
+  const generateId = () => crypto.randomUUID();
+
+  // 🔥 Restore user + token from localStorage, inject test user if none
+  const [user, setUser] = useState(() => {
+    const saved = JSON.parse(localStorage.getItem("user"));
+    if (saved) return saved;
+
+    // Test user for development
+    const testUser = { id: "test-user", username: "Tester" };
+    localStorage.setItem("user", JSON.stringify(testUser));
+    localStorage.setItem("token", "test-token");
+    return testUser;
+  });
+
+  const [token, setToken] = useState(() => {
+    return localStorage.getItem("token") || "test-token";
+  });
+
   const [products, setProducts] = useState([]);
   const [cart, setCart] = useState([]);
   const [sales, setSales] = useState([]);
   const [pendingOrders, setPendingOrders] = useState([]);
 
-  // 🔥 Restore user + token from localStorage
-  const [user, setUser] = useState(
-    JSON.parse(localStorage.getItem("user")) || null
-  );
-
-  const [token, setToken] = useState(
-    localStorage.getItem("token") || ""
-  );
-
-  const generateId = () => crypto.randomUUID();
-
   /* ---------------- Sync token/user to localStorage ---------------- */
   useEffect(() => {
-    if (token) {
-      localStorage.setItem("token", token);
-    } else {
-      localStorage.removeItem("token");
-    }
+    if (token) localStorage.setItem("token", token);
+    else localStorage.removeItem("token");
   }, [token]);
 
   useEffect(() => {
-    if (user) {
-      localStorage.setItem("user", JSON.stringify(user));
-    } else {
-      localStorage.removeItem("user");
-    }
+    if (user) localStorage.setItem("user", JSON.stringify(user));
+    else localStorage.removeItem("user");
   }, [user]);
 
   /* ---------------- Helper: fetch with auth ---------------- */
@@ -49,7 +50,6 @@ export const POSProvider = ({ children }) => {
 
     const res = await fetch(url, { ...options, headers });
 
-    // 🔥 Auto logout if unauthorized
     if (res.status === 401) {
       setUser(null);
       setToken("");
@@ -73,7 +73,7 @@ export const POSProvider = ({ children }) => {
         const [productsData, salesData, pendingData] = await Promise.all([
           authFetch(`${API_URL}/products`),
           authFetch(`${API_URL}/sales`),
-          authFetch(`${API_URL}/pending-orders`)
+          authFetch(`${API_URL}/pending-orders`),
         ]);
 
         setProducts(productsData);
@@ -99,8 +99,7 @@ export const POSProvider = ({ children }) => {
           price: Number(product.price || 0),
         }),
       });
-
-      setProducts(prev => [...prev, saved]);
+      setProducts((prev) => [...prev, saved]);
     } catch (err) {
       console.error("Add product failed", err);
     }
@@ -112,9 +111,8 @@ export const POSProvider = ({ children }) => {
         method: "PATCH",
         body: JSON.stringify(updated),
       });
-
-      setProducts(prev =>
-        prev.map(p => (p.id === id ? { ...p, ...updated } : p))
+      setProducts((prev) =>
+        prev.map((p) => (p.id === id ? { ...p, ...updated } : p))
       );
     } catch (err) {
       console.error("Update product failed", err);
@@ -124,7 +122,7 @@ export const POSProvider = ({ children }) => {
   const deleteProduct = async (id) => {
     try {
       await authFetch(`${API_URL}/products/${id}`, { method: "DELETE" });
-      setProducts(prev => prev.filter(p => p.id !== id));
+      setProducts((prev) => prev.filter((p) => p.id !== id));
     } catch (err) {
       console.error("Delete product failed", err);
     }
@@ -135,8 +133,8 @@ export const POSProvider = ({ children }) => {
     if (!product || quantity <= 0) return;
     if (product.stock <= 0) return alert(`${product.name} is out of stock!`);
 
-    setCart(prev => {
-      const existing = prev.find(i => i.productId === product.id);
+    setCart((prev) => {
+      const existing = prev.find((i) => i.productId === product.id);
 
       if (existing) {
         const newQty = existing.quantity + quantity;
@@ -145,10 +143,8 @@ export const POSProvider = ({ children }) => {
           return prev;
         }
 
-        return prev.map(i =>
-          i.productId === product.id
-            ? { ...i, quantity: newQty }
-            : i
+        return prev.map((i) =>
+          i.productId === product.id ? { ...i, quantity: newQty } : i
         );
       }
 
@@ -165,16 +161,14 @@ export const POSProvider = ({ children }) => {
   };
 
   const removeFromCart = (productId) =>
-    setCart(prev => prev.filter(i => i.productId !== productId));
+    setCart((prev) => prev.filter((i) => i.productId !== productId));
 
   const updateCartItemQuantity = (productId, quantity) =>
     quantity <= 0
       ? removeFromCart(productId)
-      : setCart(prev =>
-          prev.map(i =>
-            i.productId === productId
-              ? { ...i, quantity }
-              : i
+      : setCart((prev) =>
+          prev.map((i) =>
+            i.productId === productId ? { ...i, quantity } : i
           )
         );
 
@@ -184,20 +178,17 @@ export const POSProvider = ({ children }) => {
   const checkout = async (paymentMethod = "Cash") => {
     if (cart.length === 0) return;
 
-    if (!user) {
-      alert("Please login again.");
+    if (!user?.id) {
+      alert("No user available for checkout.");
       return;
     }
 
-    const total = cart.reduce(
-      (sum, item) => sum + item.price * item.quantity,
-      0
-    );
+    const total = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
 
     const newSale = {
       id: generateId(),
-      userId: user?.id || null,
-      userName: user?.username || "Unknown",
+      userId: user.id,
+      userName: user.username,
       paymentMethod,
       date: new Date().toISOString(),
       items: [...cart],
@@ -210,18 +201,13 @@ export const POSProvider = ({ children }) => {
         method: "POST",
         body: JSON.stringify(newSale),
       });
+      setSales((prev) => [...prev, saved]);
 
-      setSales(prev => [...prev, saved]);
-
-      // Update stock
-      setProducts(prev =>
-        prev.map(p => {
-          const cartItem = cart.find(i => i.productId === p.id);
+      setProducts((prev) =>
+        prev.map((p) => {
+          const cartItem = cart.find((i) => i.productId === p.id);
           if (!cartItem) return p;
-          return {
-            ...p,
-            stock: Math.max(0, p.stock - cartItem.quantity),
-          };
+          return { ...p, stock: Math.max(0, p.stock - cartItem.quantity) };
         })
       );
 
@@ -231,14 +217,11 @@ export const POSProvider = ({ children }) => {
     }
   };
 
-  /* ---------------- PENDING ---------------- */
+  /* ---------------- PENDING ORDERS ---------------- */
   const savePending = async (customerName, notes = "") => {
     if (cart.length === 0) return;
 
-    const total = cart.reduce(
-      (sum, item) => sum + item.price * item.quantity,
-      0
-    );
+    const total = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
 
     const newPending = {
       id: generateId(),
@@ -255,30 +238,26 @@ export const POSProvider = ({ children }) => {
         method: "POST",
         body: JSON.stringify(newPending),
       });
-
-      setPendingOrders(prev => [...prev, saved]);
+      setPendingOrders((prev) => [...prev, saved]);
       setCart([]);
     } catch (err) {
       console.error("Save pending failed", err);
     }
   };
 
-  const completePendingOrder = async (
-    orderId,
-    paymentMethod = "Cash"
-  ) => {
-    if (!user) {
-      alert("Please login again.");
+  const completePendingOrder = async (orderId, paymentMethod = "Cash") => {
+    if (!user?.id) {
+      alert("No user available for completing order.");
       return;
     }
 
-    const order = pendingOrders.find(o => o.id === orderId);
+    const order = pendingOrders.find((o) => o.id === orderId);
     if (!order) return;
 
     const completedSale = {
       id: generateId(),
-      userId: user?.id || null,
-      userName: user?.username || "Unknown",
+      userId: user.id,
+      userName: user.username,
       paymentMethod,
       date: new Date().toISOString(),
       items: order.items,
@@ -291,27 +270,18 @@ export const POSProvider = ({ children }) => {
         method: "POST",
         body: JSON.stringify(completedSale),
       });
+      setSales((prev) => [...prev, saved]);
 
-      setSales(prev => [...prev, saved]);
-
-      setProducts(prev =>
-        prev.map(p => {
-          const item = order.items.find(i => i.productId === p.id);
+      setProducts((prev) =>
+        prev.map((p) => {
+          const item = order.items.find((i) => i.productId === p.id);
           if (!item) return p;
-          return {
-            ...p,
-            stock: Math.max(0, p.stock - item.quantity),
-          };
+          return { ...p, stock: Math.max(0, p.stock - item.quantity) };
         })
       );
 
-      await authFetch(`${API_URL}/pending-orders/${orderId}`, {
-        method: "DELETE",
-      });
-
-      setPendingOrders(prev =>
-        prev.filter(o => o.id !== orderId)
-      );
+      await authFetch(`${API_URL}/pending-orders/${orderId}`, { method: "DELETE" });
+      setPendingOrders((prev) => prev.filter((o) => o.id !== orderId));
     } catch (err) {
       console.error("Complete pending failed", err);
     }
@@ -319,13 +289,8 @@ export const POSProvider = ({ children }) => {
 
   const cancelPendingOrder = async (orderId) => {
     try {
-      await authFetch(`${API_URL}/pending-orders/${orderId}`, {
-        method: "DELETE",
-      });
-
-      setPendingOrders(prev =>
-        prev.filter(o => o.id !== orderId)
-      );
+      await authFetch(`${API_URL}/pending-orders/${orderId}`, { method: "DELETE" });
+      setPendingOrders((prev) => prev.filter((o) => o.id !== orderId));
     } catch (err) {
       console.error("Cancel pending failed", err);
     }
