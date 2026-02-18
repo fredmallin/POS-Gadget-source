@@ -3,7 +3,7 @@ import React, { createContext, useContext, useState, useEffect } from "react";
 
 const AuthContext = createContext();
 
-const BACKEND_URL = "http://127.0.0.1:5000"; // adjust if your backend is elsewhere
+const BACKEND_URL = "https://pos-gadget-source-4.onrender.com"; // adjust if your backend is elsewhere
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);

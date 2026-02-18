@@ -3,7 +3,7 @@ import React, { createContext, useContext, useState, useEffect } from "react";
 const POSContext = createContext();
 
 export const POSProvider = ({ children }) => {
-  const API_URL = "http://localhost:5000/api";
+  const API_URL = "https://pos-gadget-source-4.onrender.com/api";
 
   /* ---------------- State ---------------- */
   const [products, setProducts] = useState([]);

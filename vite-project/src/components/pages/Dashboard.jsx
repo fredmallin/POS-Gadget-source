@@ -27,7 +27,7 @@ const Dashboard = ({ onNavigate }) => {
   // ----------------------------
   const handleRelogin = async () => {
     try {
-      const res = await fetch("http://localhost:5000/api/relogin", {
+      const res = await fetch("https://pos-gadget-source-4.onrender.com/api/relogin", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

@@ -99,7 +99,7 @@ def forgot_password():
         return jsonify({"error": "User not found"}), 404
 
     token = serializer.dumps(email, salt="password-reset-salt")
-    reset_link = f"http://localhost:5173/reset-password/{token}"
+    reset_link = f"https://pos-gadget-source-c5lo.vercel.app//reset-password/{token}"
 
     msg = Message("Password Reset", recipients=[email])
     msg.body = f"Click this link to reset your password:\n{reset_link}"
