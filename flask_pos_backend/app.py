@@ -12,12 +12,12 @@ app = Flask(__name__)
 app.config["SECRET_KEY"] = "supersecretkey"
 
 # ---------------- CORS ----------------
+# Allow Vercel frontend origin and handle preflight
 CORS(
     app,
     resources={r"/api/*": {"origins": "https://pos-gadget-source-c5lo.vercel.app"}},
-    supports_credentials=True
+    supports_credentials=True,
 )
-
 
 DB_PATH = "pos.db"
 
@@ -119,44 +119,46 @@ def token_required(f):
         return f(decoded, *args, **kwargs)
     return decorated
 
+# ---------------- CHANGE PASSWORD ----------------
 @app.route("/api/change-password", methods=["POST", "OPTIONS"])
-@token_required
-def change_password(decoded):
+def change_password_route():
+    # Preflight handling
     if request.method == "OPTIONS":
         return '', 200
 
-    data = request.get_json()
+    @token_required
+    def inner(decoded):
+        data = request.get_json()
+        old_password = data.get("current_password")
+        new_password = data.get("new_password")
 
-    old_password = data.get("current_password")
-    new_password = data.get("new_password")
+        if not old_password or not new_password:
+            return jsonify({"error": "Both old and new passwords are required"}), 400
 
-    if not old_password or not new_password:
-        return jsonify({"error": "Both old and new passwords are required"}), 400
+        user_id = decoded["user_id"]
 
-    user_id = decoded["user_id"]
+        user = query_db(
+            "SELECT password_hash FROM users WHERE id=?",
+            (user_id,),
+            fetchone=True
+        )
 
-    user = query_db(
-        "SELECT password_hash FROM users WHERE id=?",
-        (user_id,),
-        fetchone=True
-    )
+        if not user:
+            return jsonify({"error": "User not found"}), 404
 
-    if not user:
-        return jsonify({"error": "User not found"}), 404
+        if not check_password_hash(user[0], old_password):
+            return jsonify({"error": "Old password is incorrect"}), 401
 
-    if not check_password_hash(user[0], old_password):
-        return jsonify({"error": "Old password is incorrect"}), 401
+        new_hash = generate_password_hash(new_password)
 
-    new_hash = generate_password_hash(new_password)
+        query_db(
+            "UPDATE users SET password_hash=? WHERE id=?",
+            (new_hash, user_id)
+        )
 
-    query_db(
-        "UPDATE users SET password_hash=? WHERE id=?",
-        (new_hash, user_id)
-    )
+        return jsonify({"message": "Password changed successfully"}), 200
 
-    return jsonify({"message": "Password changed successfully"}), 200
-
-
+    return inner()
 
 # ---------------- PRODUCTS ----------------
 @app.route("/api/products", methods=["GET", "POST", "OPTIONS"])
@@ -192,14 +194,13 @@ def update_delete_product(id):
         query_db("DELETE FROM products WHERE id=?", (id,))
         return jsonify({"message": "Product deleted"}), 200
 
-        # ---------------- LOGIN ----------------
+# ---------------- LOGIN ----------------
 @app.route("/api/login", methods=["POST", "OPTIONS"])
 def login():
     if request.method == "OPTIONS":
         return '', 200
 
     data = request.get_json()
-
     username = data.get("username")
     password = data.get("password")
 
@@ -237,8 +238,6 @@ def login():
         }
     }), 200
 
-
-
 # ---------------- SALES ----------------
 @app.route("/api/sales", methods=["GET", "POST", "OPTIONS"])
 def sales_route():
@@ -260,6 +259,7 @@ def sales_route():
                 "status": r[7] or "completed"
             })
         return jsonify(sales)
+
     data = request.json
     sale_id = data.get("id") or str(uuid.uuid4())
     query_db(
@@ -290,7 +290,6 @@ def relogin(decoded):
     if not password:
         return jsonify({"error": "Password is required"}), 400
 
-    # Get user with password hash
     user = query_db(
         "SELECT id, username, password_hash FROM users WHERE id=?",
         (user_id,),
@@ -302,7 +301,6 @@ def relogin(decoded):
 
     user_id, username, password_hash = user
 
-    # Check password
     if not check_password_hash(password_hash, password):
         return jsonify({"error": "Incorrect password"}), 401
 
@@ -313,7 +311,6 @@ def relogin(decoded):
             "username": username
         }
     }), 200
-
 
 # ---------------- PENDING ORDERS ----------------
 @app.route("/api/pending-orders", methods=["GET", "POST", "OPTIONS"])
@@ -335,6 +332,7 @@ def pending_orders_route():
                 "status": r[6] or "pending"
             })
         return jsonify(orders)
+
     data = request.json
     order_id = data.get("id") or str(uuid.uuid4())
     query_db(
