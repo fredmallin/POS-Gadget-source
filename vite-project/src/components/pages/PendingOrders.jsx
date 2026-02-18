@@ -165,27 +165,30 @@ export const PendingOrders = () => {
           </thead>
           <tbody>
             {pendingOrders.map(order => (
-              <tr key={order.id}>
-                <td>{order.customerName}</td>
-                <td>${order.total.toFixed(2)}</td>
-                <td>{new Date(order.date).toLocaleString()}</td>
-                <td>
-                  <button
-                    onClick={() => handleCompleteOrder(order.id)}
-                    className="btn complete"
-                  >
-                    <CheckCircle /> Complete
-                  </button>
+  <tr key={order?.id || Math.random()}>
+    <td>{order?.customerName || "Unknown"}</td>
+    <td>${order?.total?.toFixed(2) || "0.00"}</td>
+    <td>{order?.date ? new Date(order.date).toLocaleString() : "-"}</td>
+    <td>
+      <button
+        onClick={() => order?.id && handleCompleteOrder(order)}
+        className="btn complete"
+        disabled={!order?.id}
+      >
+        <CheckCircle /> Complete
+      </button>
 
-                  <button
-                    onClick={() => handleCancelOrder(order.id)}
-                    className="btn cancel"
-                  >
-                    <XCircle /> Cancel
-                  </button>
-                </td>
-              </tr>
-            ))}
+      <button
+        onClick={() => order?.id && handleCancelOrder(order)}
+        className="btn cancel"
+        disabled={!order?.id}
+      >
+        <XCircle /> Cancel
+      </button>
+    </td>
+  </tr>
+))}
+
           </tbody>
         </table>
       )}
