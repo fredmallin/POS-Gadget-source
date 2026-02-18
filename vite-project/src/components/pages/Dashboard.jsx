@@ -130,7 +130,7 @@ const Dashboard = ({ onNavigate }) => {
     <div className="dashboard">
       <div className="dashboard-header">
         <h1>Dashboard</h1>
-        <p>Welcome back, {user.username || "Guest"}!</p>
+       <p>Welcome back, {user?.username || "Guest"}!</p>
       </div>
 
       <div className="stats-grid">
