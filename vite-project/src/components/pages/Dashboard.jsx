@@ -13,7 +13,7 @@ import {
 } from 'lucide-react';
 
 const Dashboard = ({ onNavigate }) => {
-  const { sales, pendingOrders, products, clearSales, user, token } = usePOS();
+  const { sales, pendingOrders, products, clearSales, user, setUser, token } = usePOS();
 
   // ----------------------------
   // State for "re-enter password"
@@ -33,14 +33,15 @@ const Dashboard = ({ onNavigate }) => {
           "Content-Type": "application/json",
           "Authorization": `Bearer ${token}` // use same token from login
         },
-        body: JSON.stringify({ password }) // send the password to verify
+        body: JSON.stringify({ password })
       });
 
       const data = await res.json();
 
-      if (res.ok) {
+      if (res.ok && data.user) {
         setAuthenticated(true);
         setError("");
+        setUser(data.user); // <-- update user context
       } else {
         setError(data.error || "Incorrect password");
       }
@@ -51,7 +52,7 @@ const Dashboard = ({ onNavigate }) => {
   };
 
   // ----------------------------
-  // Dashboard calculations (hooks at top level)
+  // Dashboard calculations
   // ----------------------------
   const today = new Date().toDateString();
 
@@ -130,7 +131,7 @@ const Dashboard = ({ onNavigate }) => {
     <div className="dashboard">
       <div className="dashboard-header">
         <h1>Dashboard</h1>
-       <p>Welcome back, {user?.username || "Guest"}!</p>
+        <p>Welcome back, {user?.username || "Guest"}!</p>
       </div>
 
       <div className="stats-grid">
@@ -158,7 +159,7 @@ const Dashboard = ({ onNavigate }) => {
 
       <div className="card">
         <h3>Recent Sales</h3>
-        {recentSales.length===0?<p className="empty">No sales yet</p>:(
+        {recentSales.length===0 ? <p className="empty">No sales yet</p> : (
           <div className="recent-sales">
             {recentSales.map(sale=>(
               <div key={sale.id} className="sale-row">
