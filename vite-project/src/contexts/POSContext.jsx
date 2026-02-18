@@ -10,10 +10,34 @@ export const POSProvider = ({ children }) => {
   const [cart, setCart] = useState([]);
   const [sales, setSales] = useState([]);
   const [pendingOrders, setPendingOrders] = useState([]);
- const [user, setUser] = useState(null); // no user at start
-  const [token, setToken] = useState(localStorage.getItem("token") || "");
+
+  // 🔥 Restore user + token from localStorage
+  const [user, setUser] = useState(
+    JSON.parse(localStorage.getItem("user")) || null
+  );
+
+  const [token, setToken] = useState(
+    localStorage.getItem("token") || ""
+  );
 
   const generateId = () => crypto.randomUUID();
+
+  /* ---------------- Sync token/user to localStorage ---------------- */
+  useEffect(() => {
+    if (token) {
+      localStorage.setItem("token", token);
+    } else {
+      localStorage.removeItem("token");
+    }
+  }, [token]);
+
+  useEffect(() => {
+    if (user) {
+      localStorage.setItem("user", JSON.stringify(user));
+    } else {
+      localStorage.removeItem("user");
+    }
+  }, [user]);
 
   /* ---------------- Helper: fetch with auth ---------------- */
   const authFetch = async (url, options = {}) => {
@@ -22,11 +46,23 @@ export const POSProvider = ({ children }) => {
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...options.headers,
     };
+
     const res = await fetch(url, { ...options, headers });
+
+    // 🔥 Auto logout if unauthorized
+    if (res.status === 401) {
+      setUser(null);
+      setToken("");
+      localStorage.removeItem("user");
+      localStorage.removeItem("token");
+      throw new Error("Session expired");
+    }
+
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
       throw err;
     }
+
     return res.json();
   };
 
@@ -39,6 +75,7 @@ export const POSProvider = ({ children }) => {
           authFetch(`${API_URL}/sales`),
           authFetch(`${API_URL}/pending-orders`)
         ]);
+
         setProducts(productsData);
         setSales(salesData);
         setPendingOrders(pendingData);
@@ -52,17 +89,17 @@ export const POSProvider = ({ children }) => {
 
   /* ---------------- PRODUCT MANAGEMENT ---------------- */
   const addProduct = async (product) => {
-    const newProduct = {
-      ...product,
-      id: product.id || generateId(),
-      stock: Number(product.stock || 0),
-      price: Number(product.price || 0),
-    };
     try {
       const saved = await authFetch(`${API_URL}/products`, {
         method: "POST",
-        body: JSON.stringify(newProduct),
+        body: JSON.stringify({
+          ...product,
+          id: product.id || generateId(),
+          stock: Number(product.stock || 0),
+          price: Number(product.price || 0),
+        }),
       });
+
       setProducts(prev => [...prev, saved]);
     } catch (err) {
       console.error("Add product failed", err);
@@ -75,7 +112,10 @@ export const POSProvider = ({ children }) => {
         method: "PATCH",
         body: JSON.stringify(updated),
       });
-      setProducts(prev => prev.map(p => (p.id === id ? { ...p, ...updated } : p)));
+
+      setProducts(prev =>
+        prev.map(p => (p.id === id ? { ...p, ...updated } : p))
+      );
     } catch (err) {
       console.error("Update product failed", err);
     }
@@ -90,40 +130,74 @@ export const POSProvider = ({ children }) => {
     }
   };
 
-  /* ---------------- CART MANAGEMENT ---------------- */
+  /* ---------------- CART ---------------- */
   const addToCart = (product, quantity = 1) => {
     if (!product || quantity <= 0) return;
     if (product.stock <= 0) return alert(`${product.name} is out of stock!`);
 
     setCart(prev => {
       const existing = prev.find(i => i.productId === product.id);
+
       if (existing) {
         const newQty = existing.quantity + quantity;
-        if (newQty > product.stock) return alert(`Only ${product.stock} ${product.name} left!`) || prev;
-        return prev.map(i => i.productId === product.id ? { ...i, quantity: newQty } : i);
+        if (newQty > product.stock) {
+          alert(`Only ${product.stock} ${product.name} left!`);
+          return prev;
+        }
+
+        return prev.map(i =>
+          i.productId === product.id
+            ? { ...i, quantity: newQty }
+            : i
+        );
       }
-      return [...prev, {
-        productId: product.id,
-        productName: product.name,
-        price: Number(product.price),
-        quantity,
-      }];
+
+      return [
+        ...prev,
+        {
+          productId: product.id,
+          productName: product.name,
+          price: Number(product.price),
+          quantity,
+        },
+      ];
     });
   };
 
-  const removeFromCart = (productId) => setCart(prev => prev.filter(i => i.productId !== productId));
-  const updateCartItemQuantity = (productId, quantity) => quantity <= 0 ? removeFromCart(productId) : setCart(prev => prev.map(i => i.productId === productId ? { ...i, quantity } : i));
+  const removeFromCart = (productId) =>
+    setCart(prev => prev.filter(i => i.productId !== productId));
+
+  const updateCartItemQuantity = (productId, quantity) =>
+    quantity <= 0
+      ? removeFromCart(productId)
+      : setCart(prev =>
+          prev.map(i =>
+            i.productId === productId
+              ? { ...i, quantity }
+              : i
+          )
+        );
+
   const clearCart = () => setCart([]);
 
   /* ---------------- CHECKOUT ---------------- */
   const checkout = async (paymentMethod = "Cash") => {
     if (cart.length === 0) return;
 
-    const total = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
+    if (!user) {
+      alert("Please login again.");
+      return;
+    }
+
+    const total = cart.reduce(
+      (sum, item) => sum + item.price * item.quantity,
+      0
+    );
+
     const newSale = {
       id: generateId(),
-      userId: user.id,
-      userName: user.username,
+      userId: user?.id || null,
+      userName: user?.username || "Unknown",
       paymentMethod,
       date: new Date().toISOString(),
       items: [...cart],
@@ -132,24 +206,39 @@ export const POSProvider = ({ children }) => {
     };
 
     try {
-      const saved = await authFetch(`${API_URL}/sales`, { method: "POST", body: JSON.stringify(newSale) });
+      const saved = await authFetch(`${API_URL}/sales`, {
+        method: "POST",
+        body: JSON.stringify(newSale),
+      });
+
       setSales(prev => [...prev, saved]);
+
       // Update stock
-      setProducts(prev => prev.map(p => {
-        const cartItem = cart.find(i => i.productId === p.id);
-        if (!cartItem) return p;
-        return { ...p, stock: Math.max(0, p.stock - cartItem.quantity) };
-      }));
+      setProducts(prev =>
+        prev.map(p => {
+          const cartItem = cart.find(i => i.productId === p.id);
+          if (!cartItem) return p;
+          return {
+            ...p,
+            stock: Math.max(0, p.stock - cartItem.quantity),
+          };
+        })
+      );
+
       setCart([]);
     } catch (err) {
       console.error("Checkout failed", err);
     }
   };
 
-  /* ---------------- PENDING ORDERS ---------------- */
+  /* ---------------- PENDING ---------------- */
   const savePending = async (customerName, notes = "") => {
     if (cart.length === 0) return;
-    const total = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
+
+    const total = cart.reduce(
+      (sum, item) => sum + item.price * item.quantity,
+      0
+    );
 
     const newPending = {
       id: generateId(),
@@ -162,22 +251,34 @@ export const POSProvider = ({ children }) => {
     };
 
     try {
-      const saved = await authFetch(`${API_URL}/pending-orders`, { method: "POST", body: JSON.stringify(newPending) });
+      const saved = await authFetch(`${API_URL}/pending-orders`, {
+        method: "POST",
+        body: JSON.stringify(newPending),
+      });
+
       setPendingOrders(prev => [...prev, saved]);
       setCart([]);
     } catch (err) {
-      console.error("Save pending order failed", err);
+      console.error("Save pending failed", err);
     }
   };
 
-  const completePendingOrder = async (orderId, paymentMethod = "Cash") => {
+  const completePendingOrder = async (
+    orderId,
+    paymentMethod = "Cash"
+  ) => {
+    if (!user) {
+      alert("Please login again.");
+      return;
+    }
+
     const order = pendingOrders.find(o => o.id === orderId);
     if (!order) return;
 
     const completedSale = {
       id: generateId(),
-      userId: user.id,
-      userName: user.username,
+      userId: user?.id || null,
+      userName: user?.username || "Unknown",
       paymentMethod,
       date: new Date().toISOString(),
       items: order.items,
@@ -186,54 +287,47 @@ export const POSProvider = ({ children }) => {
     };
 
     try {
-      const saved = await authFetch(`${API_URL}/sales`, { method: "POST", body: JSON.stringify(completedSale) });
+      const saved = await authFetch(`${API_URL}/sales`, {
+        method: "POST",
+        body: JSON.stringify(completedSale),
+      });
+
       setSales(prev => [...prev, saved]);
 
-      // Update stock
-      setProducts(prev => prev.map(p => {
-        const item = order.items.find(i => i.productId === p.id);
-        if (!item) return p;
-        return { ...p, stock: Math.max(0, p.stock - item.quantity) };
-      }));
+      setProducts(prev =>
+        prev.map(p => {
+          const item = order.items.find(i => i.productId === p.id);
+          if (!item) return p;
+          return {
+            ...p,
+            stock: Math.max(0, p.stock - item.quantity),
+          };
+        })
+      );
 
-      await authFetch(`${API_URL}/pending-orders/${orderId}`, { method: "DELETE" });
-      setPendingOrders(prev => prev.filter(o => o.id !== orderId));
+      await authFetch(`${API_URL}/pending-orders/${orderId}`, {
+        method: "DELETE",
+      });
+
+      setPendingOrders(prev =>
+        prev.filter(o => o.id !== orderId)
+      );
     } catch (err) {
-      console.error("Complete pending order failed", err);
+      console.error("Complete pending failed", err);
     }
   };
 
   const cancelPendingOrder = async (orderId) => {
     try {
-      await authFetch(`${API_URL}/pending-orders/${orderId}`, { method: "DELETE" });
-      setPendingOrders(prev => prev.filter(o => o.id !== orderId));
-    } catch (err) {
-      console.error("Cancel pending order failed", err);
-    }
-  };
+      await authFetch(`${API_URL}/pending-orders/${orderId}`, {
+        method: "DELETE",
+      });
 
-  /* ---------------- CLEAR FUNCTIONS ---------------- */
-  const clearSales = async () => {
-    try {
-      for (const sale of sales) {
-        await authFetch(`${API_URL}/sales/${sale.id}`, { method: "DELETE" });
-      }
-      setSales([]);
+      setPendingOrders(prev =>
+        prev.filter(o => o.id !== orderId)
+      );
     } catch (err) {
-      console.error("Clear sales failed", err);
-    }
-  };
-
-  const clearAllData = async () => {
-    setCart([]);
-    await clearSales();
-    try {
-      for (const order of pendingOrders) {
-        await authFetch(`${API_URL}/pending-orders/${order.id}`, { method: "DELETE" });
-      }
-      setPendingOrders([]);
-    } catch (err) {
-      console.error("Clear pending orders failed", err);
+      console.error("Cancel pending failed", err);
     }
   };
 
@@ -256,13 +350,10 @@ export const POSProvider = ({ children }) => {
         savePending,
         completePendingOrder,
         cancelPendingOrder,
-        clearSales,
-        clearAllData,
         user,
         setUser,
         token,
         setToken,
-        authFetch,
       }}
     >
       {children}
