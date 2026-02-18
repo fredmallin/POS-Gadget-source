@@ -1,43 +1,84 @@
-import React, { useState } from 'react';
+// src/pages/ChangePassword.jsx
+import React, { useState, useEffect } from "react";
 import { useAuth } from "../../contexts/AuthContext";
-import { Lock, CheckCircle } from 'lucide-react';
-import { toast } from 'sonner';
-import '../../index.css';
+import { Lock, CheckCircle } from "lucide-react";
+import { toast } from "sonner";
+import { useNavigate, useLocation } from "react-router-dom";
+import "../../index.css";
 
 const ChangePassword = () => {
   const { changePassword, user } = useAuth();
+  const navigate = useNavigate();
+  const location = useLocation();
 
   const [formData, setFormData] = useState({
-    oldPassword: '',
-    newPassword: '',
-    confirmPassword: '',
+    oldPassword: "",
+    newPassword: "",
+    confirmPassword: "",
   });
 
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  // ===== Updated handleSubmit for async backend call =====
+  // If first-login, old password can be empty
+  const firstLoginUsername = location.state?.username;
+
+  useEffect(() => {
+    // Redirect to login if user not logged in
+    if (!user && !firstLoginUsername) {
+      navigate("/login");
+    }
+  }, [user, firstLoginUsername, navigate]);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError('');
+    setError("");
 
-    if (formData.newPassword !== formData.confirmPassword) {
-      setError('New passwords do not match');
+    // Validation
+    if (!firstLoginUsername && !formData.oldPassword) {
+      setError("Current password is required");
+      return;
+    }
+
+    if (!formData.newPassword) {
+      setError("New password is required");
       return;
     }
 
     if (formData.newPassword.length < 6) {
-      setError('New password must be at least 6 characters');
+      setError("New password must be at least 6 characters");
       return;
     }
 
-    // Call async changePassword from AuthContext
-    const result = await changePassword(formData.oldPassword, formData.newPassword);
+    if (formData.newPassword !== formData.confirmPassword) {
+      setError("New passwords do not match");
+      return;
+    }
 
-    if (result.success) {
-      toast.success(result.message || 'Password changed successfully!');
-      setFormData({ oldPassword: '', newPassword: '', confirmPassword: '' });
-    } else {
-      setError(result.message || 'Current password is incorrect');
+    setLoading(true);
+
+    try {
+      // Send empty string if first-login (old password not required)
+      const oldPasswordToSend = formData.oldPassword || "";
+
+      const result = await changePassword(oldPasswordToSend, formData.newPassword);
+
+      if (result.success) {
+        toast.success(result.message || "Password updated successfully!");
+
+        // Reset form
+        setFormData({ oldPassword: "", newPassword: "", confirmPassword: "" });
+
+        // Redirect after password change
+        navigate("/dashboard");
+      } else {
+        setError(result.message || "Current password is incorrect");
+      }
+    } catch (err) {
+      console.error("Change password error:", err);
+      setError("Something went wrong. Please try again.");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -57,22 +98,24 @@ const ChangePassword = () => {
 
         <div className="card-content">
           <div className="user-info">
-            <strong>Current User:</strong> {user?.name || user?.username}
+            <strong>Current User:</strong> {user?.username || firstLoginUsername}
           </div>
 
           <form onSubmit={handleSubmit}>
-            <div className="form-group">
-              <label>Current Password</label>
-              <input
-                type="password"
-                value={formData.oldPassword}
-                onChange={(e) =>
-                  setFormData({ ...formData, oldPassword: e.target.value })
-                }
-                placeholder="Enter current password"
-                required
-              />
-            </div>
+            {!firstLoginUsername && (
+              <div className="form-group">
+                <label>Current Password</label>
+                <input
+                  type="password"
+                  value={formData.oldPassword}
+                  onChange={(e) =>
+                    setFormData({ ...formData, oldPassword: e.target.value })
+                  }
+                  placeholder="Enter current password"
+                  required
+                />
+              </div>
+            )}
 
             <div className="form-group">
               <label>New Password</label>
@@ -102,9 +145,9 @@ const ChangePassword = () => {
 
             {error && <div className="error-box">{error}</div>}
 
-            <button type="submit" className="submit-btn">
+            <button type="submit" className="submit-btn" disabled={loading}>
               <CheckCircle size={16} />
-              Update Password
+              {loading ? "Updating..." : "Update Password"}
             </button>
           </form>
 

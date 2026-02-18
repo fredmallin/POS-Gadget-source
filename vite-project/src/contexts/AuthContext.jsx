@@ -3,121 +3,146 @@ import React, { createContext, useContext, useState, useEffect } from "react";
 
 const AuthContext = createContext();
 
+const BACKEND_URL = "http://127.0.0.1:5000"; // adjust if your backend is elsewhere
+
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true); // ✅ start as loading
 
-  // Load user from localStorage on mount
+  // ----------------- Load user from localStorage on mount -----------------
   useEffect(() => {
     const token = localStorage.getItem("token");
     const userData = localStorage.getItem("user");
+
     if (token && userData) {
       setUser(JSON.parse(userData));
     }
+
+    setLoading(false); // ✅ finished checking
   }, []);
 
-  // ---------- LOGIN ----------
+  // ----------------- LOGIN -----------------
   const login = async (username, password) => {
     setLoading(true);
     try {
-      const res = await fetch("http://127.0.0.1:5000/api/login", {
+      const res = await fetch(`${BACKEND_URL}/api/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ username, password }),
       });
 
       const data = await res.json();
+
       if (res.ok) {
-        const userObj = { username: data.user.username, id: data.user.id };
+        const userObj = {
+          id: data.user.id,
+          username: data.user.username,
+          role: data.user.role || "user",
+          isAdmin: data.user.isAdmin || false,
+        };
+
         setUser(userObj);
         localStorage.setItem("token", data.token);
         localStorage.setItem("user", JSON.stringify(userObj));
-        return true;
+
+        return { success: true, firstLogin: data.firstLogin || false };
+      } else if (res.status === 403 && data.firstLogin) {
+        return { success: false, firstLogin: true, message: data.error };
       } else {
-        return false;
+        return { success: false, message: data.error || "Login failed" };
       }
     } catch (err) {
       console.error("Login error:", err);
-      return false;
+      return { success: false, message: "Cannot connect to server" };
     } finally {
       setLoading(false);
     }
   };
 
-  // ---------- LOGOUT ----------
+  // ----------------- LOGOUT -----------------
   const logout = () => {
     setUser(null);
     localStorage.removeItem("token");
     localStorage.removeItem("user");
   };
 
-  // ---------- CHANGE PASSWORD ----------
+  // ----------------- CHANGE PASSWORD -----------------
   const changePassword = async (currentPassword, newPassword) => {
     const token = localStorage.getItem("token");
     if (!token) return { success: false, message: "Not authenticated" };
 
     try {
-      const res = await fetch("http://127.0.0.1:5000/api/change-password", {
+      const res = await fetch(`${BACKEND_URL}/api/change-password`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ token, current_password: currentPassword, new_password: newPassword }),
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ current_password: currentPassword, new_password: newPassword }),
       });
 
       const data = await res.json();
-      if (res.ok) return { success: true, message: data.message };
-      else return { success: false, message: data.error };
+      return res.ok
+        ? { success: true, message: data.message }
+        : { success: false, message: data.error || "Failed to change password" };
     } catch (err) {
       console.error("Change password error:", err);
       return { success: false, message: "Something went wrong" };
     }
   };
 
-  // ---------- FORGOT PASSWORD ----------
+  // ----------------- FORGOT PASSWORD -----------------
   const forgotPassword = async (email) => {
     try {
-      const res = await fetch("http://127.0.0.1:5000/api/forgot-password", {
+      const res = await fetch(`${BACKEND_URL}/api/forgot-password`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email }),
       });
-
       const data = await res.json();
-      if (res.ok) return { success: true, message: data.message };
-      else return { success: false, message: data.error };
+      return res.ok
+        ? { success: true, message: data.message }
+        : { success: false, message: data.error || "Failed to send reset link" };
     } catch (err) {
       console.error("Forgot password error:", err);
       return { success: false, message: "Something went wrong" };
     }
   };
 
-  // ---------- RESET PASSWORD ----------
+  // ----------------- RESET PASSWORD -----------------
   const resetPassword = async (token, newPassword) => {
     try {
-      const res = await fetch("http://127.0.0.1:5000/api/reset-password", {
+      const res = await fetch(`${BACKEND_URL}/api/reset-password`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ token, new_password: newPassword }),
       });
-
       const data = await res.json();
-      if (res.ok) return { success: true, message: data.message };
-      else return { success: false, message: data.error };
+      return res.ok
+        ? { success: true, message: data.message }
+        : { success: false, message: data.error || "Failed to reset password" };
     } catch (err) {
       console.error("Reset password error:", err);
       return { success: false, message: "Something went wrong" };
     }
   };
 
+  // ----------------- HELPERS -----------------
+  const isAuthenticated = !!user;
+  const isAdmin = !!user?.isAdmin;
+
   return (
     <AuthContext.Provider
       value={{
         user,
-        loading,
+        loading,           // ✅ expose loading
         login,
         logout,
         changePassword,
         forgotPassword,
         resetPassword,
+        isAuthenticated,
+        isAdmin,
       }}
     >
       {children}
@@ -125,4 +150,5 @@ export const AuthProvider = ({ children }) => {
   );
 };
 
+// ----------------- CUSTOM HOOK -----------------
 export const useAuth = () => useContext(AuthContext);

@@ -1,91 +1,73 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { usePOS } from '../../contexts/POSContext';
 import { toast } from 'sonner';
 import { CheckCircle, XCircle } from 'lucide-react';
 import '../../index.css';
 
 export const PendingOrders = () => {
-  const { products, updateProduct } = usePOS();
+  const {
+    products,
+    cart,
+    addToCart,
+    removeFromCart,
+    updateCartItemQuantity,
+    pendingOrders,
+    savePending,
+    completePendingOrder,
+    cancelPendingOrder,
+  } = usePOS();
 
-  // Form states
   const [productSearch, setProductSearch] = useState('');
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [quantity, setQuantity] = useState(1);
-  const [notes, setNotes] = useState('');
   const [customerName, setCustomerName] = useState('');
+  const [notes, setNotes] = useState('');
 
-  // Pending orders (persistent)
-  const [pendingOrders, setPendingOrders] = useState(() => {
-    // Load from localStorage on first render
-    const saved = localStorage.getItem('pendingOrders');
-    return saved ? JSON.parse(saved).map(order => ({
-      ...order,
-      createdAt: new Date(order.createdAt) // restore Date objects
-    })) : [];
-  });
-
-  // Save pending orders to localStorage whenever they change
-  useEffect(() => {
-    localStorage.setItem('pendingOrders', JSON.stringify(pendingOrders));
-  }, [pendingOrders]);
-
-  // Filter products as user types
   const filteredProducts = products.filter(p =>
     p.name.toLowerCase().includes(productSearch.toLowerCase())
   );
 
-  const handleAddToPending = () => {
-    if (!selectedProduct || !customerName || quantity <= 0) return;
+  const handleAddItem = () => {
+    if (!selectedProduct || quantity <= 0) return;
 
-    const order = {
-      id: Date.now().toString(),
-      productId: selectedProduct.id,
-      productName: selectedProduct.name,
-      quantity,
-      totalAmount: selectedProduct.price * quantity,
-      customerName,
-      notes,
-      createdAt: new Date(),
-    };
-
-    setPendingOrders([order, ...pendingOrders]);
-    toast.success(`Added order for ${customerName}`);
-
-    // Reset form
+    addToCart(selectedProduct, quantity);
     setSelectedProduct(null);
     setProductSearch('');
     setQuantity(1);
-    setNotes('');
   };
 
-  const handleCompleteOrder = (orderId) => {
-    const order = pendingOrders.find(o => o.id === orderId);
-    if (order) {
-      const product = products.find(p => p.id === order.productId);
-      if (product) {
-        updateProduct(order.productId, { stock: product.stock - order.quantity });
-      }
-      toast.success(`Order for ${order.customerName} completed!`);
+  const handleSavePending = () => {
+    if (!customerName || cart.length === 0) {
+      toast.error("Add items and customer name first");
+      return;
     }
-    setPendingOrders(pendingOrders.filter(o => o.id !== orderId));
-  };
 
-  const handleCancelOrder = (orderId) => {
-    const order = pendingOrders.find(o => o.id === orderId);
-    if (order) toast('Order canceled');
-    setPendingOrders(pendingOrders.filter(o => o.id !== orderId));
+    savePending(customerName, notes);
+    toast.success("Pending order saved");
+
+    setCustomerName('');
+    setNotes('');
   };
 
   return (
     <div className="pending-orders-page">
       <h1>Pending Orders</h1>
 
-      {/* Customer Name */}
+      {/* Customer */}
       <input
         type="text"
-        placeholder="Enter customer name"
+        placeholder="Customer name"
         value={customerName}
         onChange={(e) => setCustomerName(e.target.value)}
+        className="input"
+      />
+
+      {/* Notes */}
+      <input
+        type="text"
+        placeholder="Notes (optional)"
+        value={notes}
+        onChange={(e) => setNotes(e.target.value)}
         className="input"
       />
 
@@ -98,7 +80,7 @@ export const PendingOrders = () => {
         className="input"
       />
 
-      {/* Filtered product list */}
+      {/* Product List */}
       {productSearch && !selectedProduct && (
         <ul className="product-search-list">
           {filteredProducts.map(p => (
@@ -110,7 +92,7 @@ export const PendingOrders = () => {
         </ul>
       )}
 
-      {/* Selected product & quantity/notes */}
+      {/* Selected Product */}
       {selectedProduct && (
         <div className="selected-product-form">
           <p>Selected: {selectedProduct.name}</p>
@@ -119,20 +101,30 @@ export const PendingOrders = () => {
             min="1"
             value={quantity}
             onChange={(e) => setQuantity(parseInt(e.target.value))}
-            placeholder="Quantity"
           />
-          <input
-            type="text"
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
-            placeholder="Notes (optional)"
-          />
-          <button onClick={handleAddToPending}>Add to Pending</button>
+          <button onClick={handleAddItem}>Add Item</button>
         </div>
       )}
 
-      {/* Pending Orders List */}
+      {/* Cart / Temporary Items */}
+      {cart.length > 0 && (
+        <div>
+          <h3>Items to Save</h3>
+          <ul>
+            {cart.map(item => (
+              <li key={item.productId}>
+                {item.productName} × {item.quantity}
+                <button onClick={() => removeFromCart(item.productId)}>Remove</button>
+              </li>
+            ))}
+          </ul>
+          <button onClick={handleSavePending}>Save Pending Order</button>
+        </div>
+      )}
+
+      {/* Pending Orders Table */}
       <h2>Pending Orders ({pendingOrders.length})</h2>
+
       {pendingOrders.length === 0 ? (
         <p>No pending orders yet.</p>
       ) : (
@@ -140,9 +132,6 @@ export const PendingOrders = () => {
           <thead>
             <tr>
               <th>Customer</th>
-              <th>Product</th>
-              <th>Quantity</th>
-              <th>Notes</th>
               <th>Total</th>
               <th>Date</th>
               <th>Actions</th>
@@ -152,20 +141,24 @@ export const PendingOrders = () => {
             {pendingOrders.map(order => (
               <tr key={order.id}>
                 <td>{order.customerName}</td>
-                <td>{order.productName}</td>
-                <td>{order.quantity}</td>
-                <td>{order.notes || '-'}</td>
-                <td>${order.totalAmount.toFixed(2)}</td>
-                <td>{new Date(order.createdAt).toLocaleString()}</td>
+                <td>${order.total.toFixed(2)}</td>
+                <td>{new Date(order.date).toLocaleString()}</td>
                 <td>
                   <button
-                    onClick={() => handleCompleteOrder(order.id)}
+                    onClick={() => {
+                      completePendingOrder(order.id);
+                      toast.success("Order completed");
+                    }}
                     className="btn complete"
                   >
                     <CheckCircle /> Complete
                   </button>
+
                   <button
-                    onClick={() => handleCancelOrder(order.id)}
+                    onClick={() => {
+                      cancelPendingOrder(order.id);
+                      toast("Order canceled");
+                    }}
                     className="btn cancel"
                   >
                     <XCircle /> Cancel

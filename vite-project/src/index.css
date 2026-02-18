@@ -2327,3 +2327,607 @@ input:focus {
     padding: 10px;
   }
 }
+button.danger {
+  background: #dc2626;
+  color: white;
+}
+
+button.danger:hover {
+  background: #b91c1c;
+}
+/* ----- SELL PRODUCTS PAGE ----- */
+.sell-page {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 20px;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  color: #333;
+}
+
+.sell-page h1 {
+  font-size: 2rem;
+  margin-bottom: 5px;
+  color: #1f2937;
+}
+
+.sell-page p {
+  margin-bottom: 20px;
+  color: #555;
+}
+
+/* ----- SEARCH BAR ----- */
+.search-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 20px;
+  border: 1px solid #ddd;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background-color: #fafafa;
+}
+
+.search-bar input {
+  flex: 1;
+  border: none;
+  outline: none;
+  font-size: 0.95rem;
+  background-color: transparent;
+}
+
+/* ----- LAYOUT ----- */
+.sell-layout {
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+/* ----- PRODUCTS SECTION ----- */
+.products-section {
+  flex: 2;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 20px;
+}
+
+.product-card {
+  background-color: #fff;
+  border-radius: 12px;
+  padding: 15px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.product-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+}
+
+.product-card h3 {
+  font-size: 1.1rem;
+  margin: 5px 0;
+  color: #111827;
+}
+
+.product-card p {
+  font-size: 0.9rem;
+  margin: 2px 0;
+  color: #555;
+}
+
+.product-card .price {
+  font-weight: bold;
+  color: #10b981; /* green */
+  margin: 5px 0;
+}
+
+.product-card button {
+  margin-top: 10px;
+  padding: 8px 12px;
+  background-color: #3b82f6;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.95rem;
+  transition: background 0.2s ease;
+}
+
+.product-card button:disabled {
+  background-color: #9ca3af;
+  cursor: not-allowed;
+}
+
+.product-card button:hover:not(:disabled) {
+  background-color: #2563eb;
+}
+
+/* ----- CART SECTION ----- */
+.cart-section {
+  flex: 1;
+  min-width: 250px;
+  background-color: #f9fafb;
+  border-radius: 12px;
+  padding: 15px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+  position: sticky;
+  top: 20px;
+  height: fit-content;
+}
+
+.cart-section h2 {
+  margin-bottom: 15px;
+  font-size: 1.25rem;
+}
+
+.cart-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+  padding: 6px 0;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.cart-item strong {
+  display: block;
+  font-size: 1rem;
+}
+
+.cart-item p {
+  font-size: 0.85rem;
+  color: #555;
+}
+
+.cart-controls {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.cart-controls button {
+  border: none;
+  background-color: #e5e7eb;
+  padding: 4px 6px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.cart-controls button:hover {
+  background-color: #d1d5db;
+}
+
+.cart-controls span {
+  padding: 0 6px;
+  font-weight: 500;
+}
+
+/* ----- CART TOTAL AND ACTIONS ----- */
+.cart-section h3 {
+  margin-top: 15px;
+  font-size: 1.1rem;
+}
+
+.cart-section select {
+  width: 100%;
+  padding: 6px;
+  margin: 10px 0;
+  border-radius: 6px;
+  border: 1px solid #d1d5db;
+  font-size: 0.95rem;
+}
+
+.cart-section button {
+  width: 100%;
+  padding: 8px;
+  margin-bottom: 8px;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  border: none;
+  cursor: pointer;
+}
+
+.cart-section button:first-of-type {
+  background-color: #10b981; /* green */
+  color: white;
+}
+
+.cart-section button:first-of-type:hover {
+  background-color: #059669;
+}
+
+.cart-section button:last-of-type {
+  background-color: #ef4444; /* red */
+  color: white;
+}
+
+.cart-section button:last-of-type:hover {
+  background-color: #dc2626;
+}
+
+/* ----- RESPONSIVE ----- */
+@media (max-width: 900px) {
+  .sell-layout {
+    flex-direction: column;
+  }
+
+  .cart-section {
+    position: relative;
+    top: auto;
+    margin-top: 20px;
+  }
+}
+/* Container */
+.allsales-container {
+  padding: 24px;
+  max-width: 1200px;
+  margin: auto;
+}
+
+.allsales-container h1 {
+  margin-bottom: 4px;
+}
+
+.allsales-container p {
+  color: #666;
+  margin-bottom: 20px;
+}
+
+/* Summary Cards */
+.summary-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.card {
+  background: white;
+  padding: 18px;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+  transition: transform 0.2s ease;
+}
+
+.card:hover {
+  transform: translateY(-3px);
+}
+
+.card p {
+  color: #777;
+  font-size: 14px;
+}
+
+.card h2 {
+  margin-top: 6px;
+  font-size: 22px;
+}
+
+/* Search */
+.search-box {
+  width: 100%;
+  padding: 12px 14px;
+  border-radius: 8px;
+  border: 1px solid #ddd;
+  margin-bottom: 18px;
+  font-size: 14px;
+}
+
+.search-box:focus {
+  outline: none;
+  border-color: #4f46e5;
+  box-shadow: 0 0 0 2px rgba(79,70,229,0.15);
+}
+
+/* Table */
+.sales-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: white;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+}
+
+.sales-table thead {
+  background: #f4f6fb;
+}
+
+.sales-table th,
+.sales-table td {
+  padding: 12px 14px;
+  text-align: left;
+  font-size: 14px;
+}
+
+.sales-table th {
+  font-weight: 600;
+  color: #333;
+}
+
+.sales-table tbody tr {
+  border-top: 1px solid #eee;
+  transition: background 0.15s ease;
+}
+
+.sales-table tbody tr:hover {
+  background: #fafafa;
+}
+
+/* Buttons */
+.sales-table button {
+  padding: 6px 12px;
+  border: none;
+  border-radius: 6px;
+  background: #4f46e5;
+  color: white;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.sales-table button:hover {
+  background: #4338ca;
+}
+
+/* No Sales Row */
+.no-sales {
+  text-align: center;
+  padding: 20px;
+  color: #888;
+}
+
+/* Modal Overlay */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0,0,0,0.4);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+/* Modal Box */
+.modal-content {
+  background: white;
+  padding: 24px;
+  border-radius: 14px;
+  width: 500px;
+  max-width: 90%;
+  position: relative;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+}
+
+/* Close Button */
+.modal-close {
+  position: absolute;
+  right: 12px;
+  top: 10px;
+  border: none;
+  background: none;
+  font-size: 22px;
+  cursor: pointer;
+}
+
+/* Items inside modal */
+.modal-items {
+  margin-top: 12px;
+  border-top: 1px solid #eee;
+}
+
+.modal-item {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 0;
+  border-bottom: 1px solid #f1f1f1;
+  font-size: 14px;
+}
+
+/* Total */
+.modal-total {
+  margin-top: 14px;
+  font-size: 16px;
+  text-align: right;
+}
+/* Page */
+.pending-orders-page {
+  max-width: 1100px;
+  margin: auto;
+  padding: 24px;
+}
+
+.pending-orders-page h1 {
+  margin-bottom: 16px;
+}
+
+.pending-orders-page h2 {
+  margin-top: 30px;
+  margin-bottom: 12px;
+}
+
+.pending-orders-page h3 {
+  margin-top: 20px;
+  margin-bottom: 10px;
+}
+
+/* Inputs */
+.input {
+  width: 100%;
+  padding: 12px 14px;
+  margin-bottom: 12px;
+  border-radius: 8px;
+  border: 1px solid #ddd;
+  font-size: 14px;
+}
+
+.input:focus {
+  outline: none;
+  border-color: #4f46e5;
+  box-shadow: 0 0 0 2px rgba(79,70,229,0.15);
+}
+
+/* Product search dropdown */
+.product-search-list {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 12px 0;
+  background: white;
+  border: 1px solid #eee;
+  border-radius: 10px;
+  max-height: 200px;
+  overflow-y: auto;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.06);
+}
+
+.product-search-list li {
+  padding: 10px 14px;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.product-search-list li:hover {
+  background: #f5f7ff;
+}
+
+/* Selected product form */
+.selected-product-form {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+  background: #fafafa;
+  padding: 12px;
+  border-radius: 10px;
+}
+
+.selected-product-form input {
+  width: 80px;
+  padding: 6px;
+}
+
+.selected-product-form button {
+  padding: 8px 14px;
+  border: none;
+  border-radius: 6px;
+  background: #4f46e5;
+  color: white;
+  cursor: pointer;
+}
+
+.selected-product-form button:hover {
+  background: #4338ca;
+}
+
+/* Cart items */
+.pending-orders-page ul {
+  list-style: none;
+  padding: 0;
+}
+
+.pending-orders-page ul li {
+  background: white;
+  padding: 10px 14px;
+  margin-bottom: 8px;
+  border-radius: 8px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-shadow: 0 3px 8px rgba(0,0,0,0.05);
+}
+
+.pending-orders-page ul li button {
+  border: none;
+  background: #ef4444;
+  color: white;
+  padding: 5px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.pending-orders-page ul li button:hover {
+  background: #dc2626;
+}
+
+/* Save button */
+.pending-orders-page > div button:last-child {
+  margin-top: 10px;
+  padding: 10px 16px;
+  border: none;
+  border-radius: 8px;
+  background: #16a34a;
+  color: white;
+  cursor: pointer;
+}
+
+.pending-orders-page > div button:last-child:hover {
+  background: #15803d;
+}
+
+/* Table */
+.pending-orders-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: white;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+}
+
+.pending-orders-table th,
+.pending-orders-table td {
+  padding: 12px 14px;
+  text-align: left;
+  font-size: 14px;
+}
+
+.pending-orders-table thead {
+  background: #f4f6fb;
+}
+
+.pending-orders-table tbody tr {
+  border-top: 1px solid #eee;
+}
+
+.pending-orders-table tbody tr:hover {
+  background: #fafafa;
+}
+
+/* Buttons inside table */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  margin-right: 6px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+/* Complete */
+.btn.complete {
+  background: #16a34a;
+  color: white;
+}
+
+.btn.complete:hover {
+  background: #15803d;
+}
+
+/* Cancel */
+.btn.cancel {
+  background: #ef4444;
+  color: white;
+}
+
+.btn.cancel:hover {
+  background: #dc2626;
+}

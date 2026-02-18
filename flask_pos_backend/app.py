@@ -1,198 +1,366 @@
+# pos_backend.py
 from flask import Flask, request, jsonify
 from flask_cors import CORS
-from flask_mail import Mail, Message
 from werkzeug.security import generate_password_hash, check_password_hash
 import sqlite3
+import uuid
+import json
 import jwt
 import datetime
-import uuid
 
 app = Flask(__name__)
-CORS(app)
+app.config["SECRET_KEY"] = "supersecretkey"
 
-# ================= CONFIG =================
-app.config['SECRET_KEY'] = "supersecretkey"
-app.config['MAIL_SERVER'] = "smtp.gmail.com"  # or your SMTP server
-app.config['MAIL_PORT'] = 587
-app.config['MAIL_USE_TLS'] = True
-app.config['MAIL_USERNAME'] = "your_email@gmail.com"  # your email
-app.config['MAIL_PASSWORD'] = "your_email_password"  # app password or SMTP password
+# ---------------- CORS ----------------
+CORS(
+    app,
+    resources={r"/api/*": {"origins": ["http://localhost:5173", "http://127.0.0.1:5173"]}},
+    supports_credentials=True
+)
 
-mail = Mail(app)
+DB_PATH = "pos.db"
 
-# ================= DATABASE =================
+# ---------------- DATABASE INIT ----------------
 def init_db():
-    conn = sqlite3.connect("users.db")
+    conn = sqlite3.connect(DB_PATH)
     cur = conn.cursor()
+
+    # USERS
     cur.execute('''
         CREATE TABLE IF NOT EXISTS users (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             username TEXT UNIQUE,
-            email TEXT UNIQUE,
-            password_hash TEXT,
-            reset_token TEXT,
-            token_expiry DATETIME
+            password_hash TEXT
         )
     ''')
+
+    # PRODUCTS
+    cur.execute('''
+        CREATE TABLE IF NOT EXISTS products (
+            id TEXT PRIMARY KEY,
+            name TEXT,
+            stock INTEGER,
+            price REAL
+        )
+    ''')
+
+    # SALES
+    cur.execute('''
+        CREATE TABLE IF NOT EXISTS sales (
+            id TEXT PRIMARY KEY,
+            user_id INTEGER,
+            user_name TEXT,
+            payment_method TEXT,
+            date TEXT,
+            items TEXT DEFAULT '[]',
+            total REAL DEFAULT 0,
+            status TEXT DEFAULT 'completed'
+        )
+    ''')
+
+    # PENDING ORDERS
+    cur.execute('''
+        CREATE TABLE IF NOT EXISTS pending_orders (
+            id TEXT PRIMARY KEY,
+            customer_name TEXT,
+            notes TEXT,
+            date TEXT,
+            items TEXT DEFAULT '[]',
+            total REAL DEFAULT 0,
+            status TEXT DEFAULT 'pending'
+        )
+    ''')
+
     conn.commit()
     conn.close()
 
 init_db()
 
-def get_user_by_username(username):
-    conn = sqlite3.connect("users.db")
+# ---------------- HELPERS ----------------
+def query_db(query, args=(), fetchone=False):
+    conn = sqlite3.connect(DB_PATH)
     cur = conn.cursor()
-    cur.execute("SELECT * FROM users WHERE username=?", (username,))
-    user = cur.fetchone()
-    conn.close()
-    return user
-
-def get_user_by_email(email):
-    conn = sqlite3.connect("users.db")
-    cur = conn.cursor()
-    cur.execute("SELECT * FROM users WHERE email=?", (email,))
-    user = cur.fetchone()
-    conn.close()
-    return user
-
-def update_user_password(user_id, new_hash):
-    conn = sqlite3.connect("users.db")
-    cur = conn.cursor()
-    cur.execute("UPDATE users SET password_hash=? WHERE id=?", (new_hash, user_id))
+    cur.execute(query, args)
+    if query.strip().upper().startswith("SELECT"):
+        result = cur.fetchall()
+    else:
+        result = None
     conn.commit()
     conn.close()
+    if fetchone:
+        return result[0] if result else None
+    return result
 
-def set_reset_token(user_id, token, expiry):
-    conn = sqlite3.connect("users.db")
-    cur = conn.cursor()
-    cur.execute("UPDATE users SET reset_token=?, token_expiry=? WHERE id=?", (token, expiry, user_id))
-    conn.commit()
-    conn.close()
-
-def get_user_by_token(token):
-    conn = sqlite3.connect("users.db")
-    cur = conn.cursor()
-    cur.execute("SELECT * FROM users WHERE reset_token=?", (token,))
-    user = cur.fetchone()
-    conn.close()
-    return user
-
-# ================= ROUTES =================
-
-# ------ REGISTER (optional, for testing) ------
-@app.route("/api/register", methods=["POST"])
-def register():
-    data = request.get_json()
-    username = data["username"]
-    email = data["email"]
-    password = generate_password_hash(data["password"])
-
+def safe_json_load(value):
+    if not value:
+        return []
     try:
-        conn = sqlite3.connect("users.db")
-        cur = conn.cursor()
-        cur.execute("INSERT INTO users (username, email, password_hash) VALUES (?, ?, ?)", (username, email, password))
-        conn.commit()
-        conn.close()
-        return jsonify({"message": "User registered successfully"})
-    except Exception as e:
-        return jsonify({"error": str(e)}), 400
+        return json.loads(value)
+    except:
+        return []
 
-# ------ LOGIN ------
-@app.route("/api/login", methods=["POST"])
-def login():
+def token_required(f):
+    from functools import wraps
+
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        # Allow OPTIONS requests to pass without auth
+        if request.method == "OPTIONS":
+            return '', 200
+
+        token = request.headers.get("Authorization", "").replace("Bearer ", "")
+        if not token:
+            return jsonify({"error": "Token missing"}), 401
+        try:
+            decoded = jwt.decode(token, app.config["SECRET_KEY"], algorithms=["HS256"])
+        except:
+            return jsonify({"error": "Invalid token"}), 401
+        return f(decoded, *args, **kwargs)
+    return decorated
+
+@app.route("/api/change-password", methods=["POST", "OPTIONS"])
+@token_required
+def change_password(decoded):
+    if request.method == "OPTIONS":
+        return '', 200
+
     data = request.get_json()
-    username = data["username"]
-    password = data["password"]
 
-    user = get_user_by_username(username)
-    if user and check_password_hash(user[3], password):
-        token = jwt.encode(
-            {"user_id": user[0], "exp": datetime.datetime.utcnow() + datetime.timedelta(hours=2)},
-            app.config['SECRET_KEY'],
-            algorithm="HS256"
-        )
-        return jsonify({"user": {"id": user[0], "username": user[1]}, "token": token})
-    return jsonify({"error": "Invalid username or password"}), 401
-
-# ------ FORGOT PASSWORD ------
-@app.route("/api/forgot-password", methods=["POST"])
-def forgot_password():
-    data = request.get_json()
-    email = data["email"]
-
-    user = get_user_by_email(email)
-    if not user:
-        return jsonify({"error": "Email not found"}), 404
-
-    token = str(uuid.uuid4())
-    expiry = datetime.datetime.utcnow() + datetime.timedelta(hours=1)
-    set_reset_token(user[0], token, expiry)
-
-    reset_link = f"http://localhost:3000/reset-password?token={token}"  # React frontend link
-
-    # send email
-    msg = Message("Reset Your Password", sender=app.config['MAIL_USERNAME'], recipients=[email])
-    msg.body = f"Click this link to reset your password (valid 1 hour): {reset_link}"
-    mail.send(msg)
-
-    return jsonify({"message": "Reset link sent to your email"})
-
-# ------ RESET PASSWORD ------
-@app.route("/api/reset-password", methods=["POST"])
-def reset_password():
-    data = request.get_json()
-    token = data["token"]
-    new_password = data["new_password"]
-
-    user = get_user_by_token(token)
-    if not user:
-        return jsonify({"error": "Invalid token"}), 400
-
-    expiry = datetime.datetime.strptime(user[5], "%Y-%m-%d %H:%M:%S.%f")
-    if datetime.datetime.utcnow() > expiry:
-        return jsonify({"error": "Token expired"}), 400
-
-    new_hash = generate_password_hash(new_password)
-    update_user_password(user[0], new_hash)
-
-    # remove token
-    set_reset_token(user[0], None, None)
-
-    return jsonify({"message": "Password updated successfully"})
-
-# ------ CHANGE PASSWORD ------
-@app.route("/api/change-password", methods=["POST"])
-def change_password():
-    data = request.get_json()
-    token = data.get("token")  # JWT from localStorage
-    current_password = data.get("current_password")
+    old_password = data.get("current_password")
     new_password = data.get("new_password")
 
-    if not token:
-        return jsonify({"error": "Token missing"}), 401
+    if not old_password or not new_password:
+        return jsonify({"error": "Both old and new passwords are required"}), 400
 
-    try:
-        payload = jwt.decode(token, app.config['SECRET_KEY'], algorithms=["HS256"])
-        user_id = payload["user_id"]
+    user_id = decoded["user_id"]
 
-        conn = sqlite3.connect("users.db")
-        cur = conn.cursor()
-        cur.execute("SELECT password_hash FROM users WHERE id=?", (user_id,))
-        row = cur.fetchone()
-        conn.close()
+    user = query_db(
+        "SELECT password_hash FROM users WHERE id=?",
+        (user_id,),
+        fetchone=True
+    )
 
-        if row and check_password_hash(row[0], current_password):
-            new_hash = generate_password_hash(new_password)
-            update_user_password(user_id, new_hash)
-            return jsonify({"message": "Password changed successfully"})
-        else:
-            return jsonify({"error": "Current password incorrect"}), 400
+    if not user:
+        return jsonify({"error": "User not found"}), 404
 
-    except jwt.ExpiredSignatureError:
-        return jsonify({"error": "Token expired"}), 401
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
+    if not check_password_hash(user[0], old_password):
+        return jsonify({"error": "Old password is incorrect"}), 401
 
-# ================= RUN APP =================
+    new_hash = generate_password_hash(new_password)
+
+    query_db(
+        "UPDATE users SET password_hash=? WHERE id=?",
+        (new_hash, user_id)
+    )
+
+    return jsonify({"message": "Password changed successfully"}), 200
+
+
+
+# ---------------- PRODUCTS ----------------
+@app.route("/api/products", methods=["GET", "POST", "OPTIONS"])
+def products_route():
+    if request.method == "OPTIONS":
+        return '', 200
+
+    if request.method == "GET":
+        rows = query_db("SELECT * FROM products")
+        return jsonify([{"id": r[0], "name": r[1], "stock": r[2], "price": r[3]} for r in rows])
+
+    data = request.json
+    product_id = data.get("id") or str(uuid.uuid4())
+    query_db(
+        "INSERT INTO products (id, name, stock, price) VALUES (?, ?, ?, ?)",
+        (product_id, data["name"], data["stock"], data["price"])
+    )
+    return jsonify({"id": product_id, **data}), 200
+
+@app.route("/api/products/<id>", methods=["PATCH", "DELETE", "OPTIONS"])
+def update_delete_product(id):
+    if request.method == "OPTIONS":
+        return '', 200
+
+    data = request.json
+    if request.method == "PATCH":
+        query_db(
+            "UPDATE products SET name=?, stock=?, price=? WHERE id=?",
+            (data.get("name"), data.get("stock"), data.get("price"), id)
+        )
+        return jsonify({"message": "Product updated"}), 200
+    if request.method == "DELETE":
+        query_db("DELETE FROM products WHERE id=?", (id,))
+        return jsonify({"message": "Product deleted"}), 200
+
+        # ---------------- LOGIN ----------------
+@app.route("/api/login", methods=["POST", "OPTIONS"])
+def login():
+    if request.method == "OPTIONS":
+        return '', 200
+
+    data = request.get_json()
+
+    username = data.get("username")
+    password = data.get("password")
+
+    if not username or not password:
+        return jsonify({"error": "Username and password required"}), 400
+
+    user = query_db(
+        "SELECT id, password_hash FROM users WHERE username=?",
+        (username,),
+        fetchone=True
+    )
+
+    if not user:
+        return jsonify({"error": "Invalid credentials"}), 401
+
+    user_id, password_hash = user
+
+    if not check_password_hash(password_hash, password):
+        return jsonify({"error": "Invalid credentials"}), 401
+
+    token = jwt.encode(
+        {
+            "user_id": user_id,
+            "exp": datetime.datetime.utcnow() + datetime.timedelta(hours=8)
+        },
+        app.config["SECRET_KEY"],
+        algorithm="HS256"
+    )
+
+    return jsonify({
+        "token": token,
+        "user": {
+            "id": user_id,
+            "username": username
+        }
+    }), 200
+
+
+
+# ---------------- SALES ----------------
+@app.route("/api/sales", methods=["GET", "POST", "OPTIONS"])
+def sales_route():
+    if request.method == "OPTIONS":
+        return '', 200
+
+    if request.method == "GET":
+        rows = query_db("SELECT * FROM sales")
+        sales = []
+        for r in rows:
+            sales.append({
+                "id": r[0],
+                "userId": r[1],
+                "userName": r[2],
+                "paymentMethod": r[3],
+                "date": r[4],
+                "items": safe_json_load(r[5]),
+                "total": r[6] or 0,
+                "status": r[7] or "completed"
+            })
+        return jsonify(sales)
+    data = request.json
+    sale_id = data.get("id") or str(uuid.uuid4())
+    query_db(
+        "INSERT INTO sales (id, user_id, user_name, payment_method, date, items, total, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+        (
+            sale_id,
+            data["userId"],
+            data["userName"],
+            data["paymentMethod"],
+            data["date"],
+            json.dumps(data.get("items", [])),
+            data.get("total", 0),
+            data.get("status", "completed")
+        )
+    )
+    return jsonify({"id": sale_id, **data}), 200
+
+@app.route("/api/relogin", methods=["POST", "OPTIONS"])
+@token_required
+def relogin(decoded):
+    if request.method == "OPTIONS":
+        return '', 200
+
+    user_id = decoded["user_id"]
+    data = request.get_json()
+    password = data.get("password")  # <- get password from frontend
+
+    if not password:
+        return jsonify({"error": "Password is required"}), 400
+
+    # Get user with password hash
+    user = query_db(
+        "SELECT id, username, password_hash FROM users WHERE id=?",
+        (user_id,),
+        fetchone=True
+    )
+
+    if not user:
+        return jsonify({"error": "User not found"}), 404
+
+    user_id, username, password_hash = user
+
+    # Check password
+    if not check_password_hash(password_hash, password):
+        return jsonify({"error": "Incorrect password"}), 401
+
+    return jsonify({
+        "success": True,
+        "user": {
+            "id": user_id,
+            "username": username
+        }
+    }), 200
+
+
+# ---------------- PENDING ORDERS ----------------
+@app.route("/api/pending-orders", methods=["GET", "POST", "OPTIONS"])
+def pending_orders_route():
+    if request.method == "OPTIONS":
+        return '', 200
+
+    if request.method == "GET":
+        rows = query_db("SELECT * FROM pending_orders")
+        orders = []
+        for r in rows:
+            orders.append({
+                "id": r[0],
+                "customerName": r[1],
+                "notes": r[2],
+                "date": r[3],
+                "items": safe_json_load(r[4]),
+                "total": r[5] or 0,
+                "status": r[6] or "pending"
+            })
+        return jsonify(orders)
+    data = request.json
+    order_id = data.get("id") or str(uuid.uuid4())
+    query_db(
+        "INSERT INTO pending_orders (id, customer_name, notes, date, items, total, status) VALUES (?, ?, ?, ?, ?, ?, ?)",
+        (
+            order_id,
+            data["customerName"],
+            data.get("notes", ""),
+            data["date"],
+            json.dumps(data.get("items", [])),
+            data.get("total", 0),
+            data.get("status", "pending")
+        )
+    )
+    return jsonify({"id": order_id, **data}), 200
+
+@app.route("/api/pending-orders/<id>", methods=["DELETE", "OPTIONS"])
+def delete_pending(id):
+    if request.method == "OPTIONS":
+        return '', 200
+    query_db("DELETE FROM pending_orders WHERE id=?", (id,))
+    return jsonify({"message": "Pending order deleted"}), 200
+
+# ---------------- HOME ----------------
+@app.route("/")
+def home():
+    return jsonify({"message": "Flask POS Backend is running"}), 200
+
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(host="127.0.0.1", port=5000, debug=True)

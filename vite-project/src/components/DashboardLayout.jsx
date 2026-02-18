@@ -6,7 +6,6 @@ import {
   ShoppingCart,
   Package,
   Warehouse,
-  Settings,
   BarChart3,
   LogOut,
   Menu,
@@ -22,7 +21,7 @@ import {
 } from 'lucide-react';
 
 export const DashboardLayout = ({ children, activeItem, onMenuItemClick }) => {
-  const { user, logout, isAdmin } = useAuth();
+  const { user, logout } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
   const navSections = [
@@ -41,7 +40,7 @@ export const DashboardLayout = ({ children, activeItem, onMenuItemClick }) => {
     {
       title: 'Products',
       items: [
-        { id: 'add-product', label: 'Add Product', icon: <PackagePlus />, adminOnly: true },
+        { id: 'add-product', label: 'Add Product', icon: <PackagePlus /> },
         { id: 'view-products', label: 'View Products', icon: <Package /> },
         { id: 'search-products', label: 'Search Products', icon: <Search /> },
       ],
@@ -57,25 +56,18 @@ export const DashboardLayout = ({ children, activeItem, onMenuItemClick }) => {
       title: 'Settings',
       items: [
         { id: 'change-password', label: 'Change Password', icon: <Lock /> },
-        { id: 'preferences', label: 'Preferences', icon: <SlidersHorizontal />, adminOnly: true },
+        { id: 'preferences', label: 'Preferences', icon: <SlidersHorizontal /> },
       ],
     },
     {
-      title: 'Admin',
+      title: 'Reports',
       items: [
-        { id: 'total-goods', label: 'Total Goods', icon: <PackageSearch />, adminOnly: true },
-        { id: 'total-sales', label: 'Total Sales', icon: <BarChart3 />, adminOnly: true },
-        { id: 'stock-value', label: 'Stock Value', icon: <BarChart3 />, adminOnly: true },
+        { id: 'total-goods', label: 'Total Goods', icon: <PackageSearch /> },
+        { id: 'total-sales', label: 'Total Sales', icon: <BarChart3 /> },
+        { id: 'stock-value', label: 'Stock Value', icon: <BarChart3 /> },
       ],
     },
   ];
-
-  const filteredSections = navSections
-    .map(section => ({
-      ...section,
-      items: section.items.filter(item => !item.adminOnly || isAdmin),
-    }))
-    .filter(section => section.items.length > 0);
 
   return (
     <div className="dashboard-container">
@@ -89,7 +81,7 @@ export const DashboardLayout = ({ children, activeItem, onMenuItemClick }) => {
         </div>
 
         <div className="sidebar-menu">
-          {filteredSections.map((section, idx) => (
+          {navSections.map((section, idx) => (
             <div key={idx} className="menu-section">
               <h4 className="section-title">{section.title}</h4>
               <nav>
@@ -122,11 +114,14 @@ export const DashboardLayout = ({ children, activeItem, onMenuItemClick }) => {
 
       {/* Main Content */}
       <div className="main-content">
-        {/* Header */}
         <header className="main-header">
-          <button className="toggle-sidebar-btn" onClick={() => setSidebarOpen(!sidebarOpen)}>
+          <button
+            className="toggle-sidebar-btn"
+            onClick={() => setSidebarOpen(!sidebarOpen)}
+          >
             {sidebarOpen ? <X /> : <Menu />}
           </button>
+
           <div className="date-display">
             {new Date().toLocaleDateString('en-US', {
               weekday: 'long',
@@ -137,7 +132,6 @@ export const DashboardLayout = ({ children, activeItem, onMenuItemClick }) => {
           </div>
         </header>
 
-        {/* Page Content */}
         <main className="page-content">{children}</main>
       </div>
     </div>

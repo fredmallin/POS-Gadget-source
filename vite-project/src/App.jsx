@@ -21,8 +21,8 @@ import ChangePassword from "./components/pages/ChangePassword";
 import Preferences from "./components/pages/Preferences";
 import { AdminReports } from "./components/pages/AdminReports";
 
-import  ForgotPassword  from "./components/pages/ForgotPassword";
-import  ResetPassword  from "./components/pages/ResetPassword";
+import ForgotPassword from "./components/pages/ForgotPassword";
+import ResetPassword from "./components/pages/ResetPassword";
 
 import { Toaster } from "sonner";
 import "./App.css";

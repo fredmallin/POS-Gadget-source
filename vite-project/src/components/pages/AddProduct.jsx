@@ -1,11 +1,13 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { usePOS } from '../../contexts/POSContext';
 import { PackagePlus } from 'lucide-react';
 import { toast } from 'sonner';
 import '../../index.css';
 
 export const AddProduct = () => {
-  const { addProduct } = usePOS(); // now this works
+  const { addProduct } = usePOS();
+  const fileInputRef = useRef(null);
+
   const [formData, setFormData] = useState({
     name: '',
     price: '',
@@ -16,7 +18,29 @@ export const AddProduct = () => {
   });
 
   const handleChange = (field, value) => {
-    setFormData({ ...formData, [field]: value });
+    setFormData(prev => ({ ...prev, [field]: value }));
+  };
+
+  // Handle file upload (desktop + phone gallery + camera)
+  const handleImageUpload = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    // Validate image type
+    if (!file.type.startsWith("image/")) {
+      toast.error("Please upload a valid image file");
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setFormData(prev => ({
+        ...prev,
+        imageUrl: reader.result
+      }));
+    };
+
+    reader.readAsDataURL(file);
   };
 
   const handleSubmit = (e) => {
@@ -37,6 +61,8 @@ export const AddProduct = () => {
     });
 
     toast.success('Product added successfully!');
+
+    // Reset form
     setFormData({
       name: '',
       price: '',
@@ -45,6 +71,11 @@ export const AddProduct = () => {
       sku: '',
       imageUrl: '',
     });
+
+    // Reset file input
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
   };
 
   return (
@@ -60,6 +91,7 @@ export const AddProduct = () => {
 
         <form className="card-body" onSubmit={handleSubmit}>
           <div className="form-grid">
+
             <div className="form-group">
               <label>Product Name *</label>
               <input
@@ -112,24 +144,50 @@ export const AddProduct = () => {
               />
             </div>
 
+            {/* IMAGE UPLOAD */}
             <div className="form-group">
-              <label>Image URL (optional)</label>
+              <label>Product Image (optional)</label>
+
               <input
-                type="url"
-                value={formData.imageUrl}
-                onChange={e => handleChange('imageUrl', e.target.value)}
+                type="file"
+                accept="image/*"
+                capture="environment"
+                onChange={handleImageUpload}
+                ref={fileInputRef}
               />
+
+              <small style={{ color: "#666" }}>
+                Choose from gallery or take a photo
+              </small>
+
+              {formData.imageUrl && (
+                <div style={{ marginTop: "10px" }}>
+                  <img
+                    src={formData.imageUrl}
+                    alt="Preview"
+                    style={{
+                      width: "120px",
+                      height: "120px",
+                      objectFit: "cover",
+                      borderRadius: "8px",
+                      border: "1px solid #ddd"
+                    }}
+                  />
+                </div>
+              )}
             </div>
+
           </div>
 
           <div className="form-actions">
             <button type="submit" className="btn-primary">
               <PackagePlus size={16} /> Add Product
             </button>
+
             <button
               type="button"
               className="btn-outline"
-              onClick={() =>
+              onClick={() => {
                 setFormData({
                   name: '',
                   price: '',
@@ -137,8 +195,12 @@ export const AddProduct = () => {
                   category: '',
                   sku: '',
                   imageUrl: '',
-                })
-              }
+                });
+
+                if (fileInputRef.current) {
+                  fileInputRef.current.value = "";
+                }
+              }}
             >
               Clear Form
             </button>

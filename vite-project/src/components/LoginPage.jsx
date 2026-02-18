@@ -1,3 +1,4 @@
+// src/pages/LoginPage.jsx
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "../index.css";
@@ -10,7 +11,7 @@ export const LoginPage = () => {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const { login } = useAuth(); // login function from AuthContext
+  const { login } = useAuth();
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
@@ -19,14 +20,21 @@ export const LoginPage = () => {
     setLoading(true);
 
     try {
-      const success = await login(username, password); // login calls backend
-      if (success) {
-        navigate("/dashboard"); // redirect to dashboard
+      // Call login from AuthContext
+      const result = await login(username, password);
+
+      if (result.success) {
+        // Normal login
+        navigate("/dashboard");
+      } else if (result.firstLogin) {
+        // First-time login, redirect to change-password page
+        navigate("/change-password", { state: { username } });
       } else {
-        setError("Invalid username or password");
+        // Login failed
+        setError(result.message || "Invalid username or password");
       }
     } catch (err) {
-      console.error(err);
+      console.error("Login error:", err);
       setError("Something went wrong. Please try again.");
     } finally {
       setLoading(false);
@@ -38,9 +46,9 @@ export const LoginPage = () => {
       <div className="login-card">
         <div className="login-header">
           <div className="login-icon">
-            <ShoppingCart className="icon-white" />
+            <ShoppingCart className="icon-white" size={40} />
           </div>
-          <h1 className="login-title">POS System</h1>
+          <h1 className="login-title">GADGET SOURCE POS</h1>
           <p className="login-description">
             Sign in to access the point of sale system
           </p>
@@ -73,7 +81,7 @@ export const LoginPage = () => {
 
           {error && (
             <div className="alert">
-              <AlertCircle className="alert-icon" />
+              <AlertCircle className="alert-icon" size={20} />
               <span className="alert-text">{error}</span>
             </div>
           )}
@@ -84,13 +92,6 @@ export const LoginPage = () => {
 
           <div className="forgot-password">
             <a href="/forgot-password">Forgot Password?</a>
-          </div>
-
-          <div className="demo-credentials">
-            <p className="demo-title">Demo Credentials:</p>
-            <p>
-              <strong>User:</strong> testuser / test123
-            </p>
           </div>
         </form>
       </div>

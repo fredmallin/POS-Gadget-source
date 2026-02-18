@@ -98,6 +98,25 @@ const SellProducts = () => {
           ) : (
             filteredProducts.map((product) => (
               <div key={product.id} className="product-card">
+
+              {/* PRODUCT IMAGE */}
+<img
+  src={product.imageUrl || "https://picsum.photos/150"}
+  alt={product.name}
+  style={{
+    width: "100%",
+    height: "140px",
+    objectFit: "cover",
+    borderRadius: "8px",
+    marginBottom: "10px",
+  }}
+  onError={(e) => {
+    e.target.onerror = null; // prevent infinite loop
+    e.target.src = "https://picsum.photos/150"; // fallback if image fails
+  }}
+/>
+
+
                 <h3>{product.name}</h3>
                 <p>{product.category}</p>
                 {product.sku && <p>SKU: {product.sku}</p>}
