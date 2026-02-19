@@ -4,10 +4,9 @@ import { usePOS } from '../../contexts/POSContext';
 import '../../index.css';
 
 const SearchProducts = () => {
-  const { products = [] } = usePOS(); // safe default
+  const { products = [] } = usePOS(); 
   const [searchTerm, setSearchTerm] = useState('');
 
-  // Safe filtering: use empty string fallback for undefined fields
   const filteredProducts = products.filter((p) => {
     const name = p.name || '';
     const category = p.category || '';
@@ -27,21 +26,19 @@ const SearchProducts = () => {
         <p>Quickly find products by name, SKU, or category</p>
       </header>
 
-      {/* Search Bar */}
       <div className="card">
         <div className="search-bar">
           <Search className="search-icon" size={20} />
           <input
             type="text"
             placeholder="Type to search by name, SKU, or category..."
-            value={searchTerm} // controlled input
+            value={searchTerm} 
             onChange={(e) => setSearchTerm(e.target.value)}
             autoFocus
           />
         </div>
       </div>
 
-      {/* Results */}
       {products.length === 0 ? (
         <div className="card empty-state">
           <Package size={48} />
