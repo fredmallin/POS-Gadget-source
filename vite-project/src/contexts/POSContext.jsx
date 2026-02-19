@@ -8,21 +8,14 @@ export const POSProvider = ({ children }) => {
   /* ---------------- State ---------------- */
   const generateId = () => crypto.randomUUID();
 
-  // 🔥 Restore user + token from localStorage, inject test user if none
-  const [user, setUser] = useState(() => {
-    const saved = JSON.parse(localStorage.getItem("user"));
-    if (saved) return saved;
+  // Initialize user and token from localStorage only
+const [user, setUser] = useState(() => {
+  const saved = JSON.parse(localStorage.getItem("user"));
+  return saved || null;   // do NOT inject a test user
+});
 
-    // Test user for development
-    const testUser = { id: "test-user", username: "Tester" };
-    localStorage.setItem("user", JSON.stringify(testUser));
-    localStorage.setItem("token", "test-token");
-    return testUser;
-  });
+const [token, setToken] = useState(() => localStorage.getItem("token") || "");
 
-  const [token, setToken] = useState(() => {
-    return localStorage.getItem("token") || "test-token";
-  });
 
   const [products, setProducts] = useState([]);
   const [cart, setCart] = useState([]);
@@ -65,6 +58,20 @@ export const POSProvider = ({ children }) => {
 
     return res.json();
   };
+
+/* ---------------- RELOGIN ---------------- */
+const relogin = async (password) => {
+  try {
+    const res = await authFetch(`${API_URL}/relogin`, {
+      method: "POST",
+      body: JSON.stringify({ password }),
+    });
+    // backend returns: { success: true, user: { id, username } }
+    return { success: true, user: res.user };
+  } catch (err) {
+    return { success: false, error: err.error || "Incorrect password" };
+  }
+};
 
   /* ---------------- Load Data ---------------- */
   useEffect(() => {
@@ -319,6 +326,7 @@ export const POSProvider = ({ children }) => {
         setUser,
         token,
         setToken,
+         relogin,
       }}
     >
       {children}

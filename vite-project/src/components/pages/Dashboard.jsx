@@ -13,58 +13,54 @@ import {
 } from 'lucide-react';
 
 const Dashboard = ({ onNavigate }) => {
-  const { sales, pendingOrders, products, clearSales, user, setUser, token } = usePOS();
+  const { 
+    sales, 
+    pendingOrders, 
+    products, 
+    clearSales, 
+    user, 
+    setUser, 
+    token, 
+    relogin 
+  } = usePOS();
 
-
+  /* ---------------- State ---------------- */
   const [authenticated, setAuthenticated] = useState(false);
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
 
+  /* ---------------- Relogin using context ---------------- */
   const handleRelogin = async () => {
-    try {
-      const res = await fetch("https://pos-gadget-source-4.onrender.com/api/relogin", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}` 
-        },
-        body: JSON.stringify({ password })
-      });
-
-      const data = await res.json();
-
-      if (res.ok && data.user) {
-        setAuthenticated(true);
-        setError("");
-        setUser(data.user); 
-      } else {
-        setError(data.error || "Incorrect password");
-      }
-    } catch (err) {
-      console.error(err);
-      setError("Server error");
+    const result = await relogin(password);
+    if (result.success) {
+      setUser(result.user);
+      setAuthenticated(true);
+      setError("");
+    } else {
+      setError(result.error);
     }
   };
 
+  /* ---------------- Stats calculations ---------------- */
   const today = new Date().toDateString();
 
-  const todaySales = useMemo(() =>
-    sales.filter(s => s.status === "Paid" && new Date(s.date).toDateString() === today),
+  const todaySales = useMemo(
+    () => sales.filter(s => s.status === "Paid" && new Date(s.date).toDateString() === today),
     [sales]
   );
 
-  const todayRevenue = useMemo(() =>
-    todaySales.reduce((sum, s) => sum + (s.total || 0), 0),
+  const todayRevenue = useMemo(
+    () => todaySales.reduce((sum, s) => sum + (s.total || 0), 0),
     [todaySales]
   );
 
-  const totalRevenue = useMemo(() =>
-    sales.filter(s => s.status === "Paid").reduce((sum, s) => sum + (s.total || 0), 0),
+  const totalRevenue = useMemo(
+    () => sales.filter(s => s.status === "Paid").reduce((sum, s) => sum + (s.total || 0), 0),
     [sales]
   );
 
-  const totalStockValue = useMemo(() =>
-    products.reduce((sum, p) => sum + (p.price || 0) * (p.stock || 0), 0),
+  const totalStockValue = useMemo(
+    () => products.reduce((sum, p) => sum + (p.price || 0) * (p.stock || 0), 0),
     [products]
   );
 
@@ -73,9 +69,10 @@ const Dashboard = ({ onNavigate }) => {
   const totalProducts = products.length;
 
   const recentSales = useMemo(
-    () => [...sales].filter(s => s.status === "Paid")
-      .sort((a,b) => new Date(b.date) - new Date(a.date))
-      .slice(0,5),
+    () => [...sales]
+      .filter(s => s.status === "Paid")
+      .sort((a, b) => new Date(b.date) - new Date(a.date))
+      .slice(0, 5),
     [sales]
   );
 
@@ -88,15 +85,17 @@ const Dashboard = ({ onNavigate }) => {
     { title:"Total Products", value: totalProducts, icon:<Package />, color:'teal' }
   ];
 
+  /* ---------------- Actions ---------------- */
   const handleClear = async () => {
     if(window.confirm("This will permanently delete all sales. Continue?")){
       await clearSales();
       alert("Sales cleared!");
     }
-  }
+  };
 
   const formatItems = items => items.map(i => `${i.productName||'Item'} (${i.quantity||1})`).join(', ');
 
+  /* ---------------- Login Form ---------------- */
   if (!authenticated) {
     return (
       <div className="dashboard-login">
@@ -113,7 +112,7 @@ const Dashboard = ({ onNavigate }) => {
     );
   }
 
-  
+  /* ---------------- Dashboard UI ---------------- */
   return (
     <div className="dashboard">
       <div className="dashboard-header">
@@ -123,7 +122,12 @@ const Dashboard = ({ onNavigate }) => {
 
       <div className="stats-grid">
         {stats.map((stat,i)=>(
-          <div key={i} className={`stat-card ${stat.color}`} onClick={stat.action||undefined} style={{cursor:stat.action?'pointer':'default'}}>
+          <div 
+            key={i} 
+            className={`stat-card ${stat.color}`} 
+            onClick={stat.action||undefined} 
+            style={{cursor:stat.action?'pointer':'default'}}
+          >
             <div className="stat-info">
               <p className="stat-title">{stat.title}</p>
               <h2>{stat.value}</h2>
@@ -146,9 +150,11 @@ const Dashboard = ({ onNavigate }) => {
 
       <div className="card">
         <h3>Recent Sales</h3>
-        {recentSales.length===0 ? <p className="empty">No sales yet</p> : (
+        {recentSales.length === 0 ? (
+          <p className="empty">No sales yet</p>
+        ) : (
           <div className="recent-sales">
-            {recentSales.map(sale=>(
+            {recentSales.map(sale => (
               <div key={sale.id} className="sale-row">
                 <div>
                   <strong>{formatItems(sale.items)}</strong>
@@ -165,6 +171,6 @@ const Dashboard = ({ onNavigate }) => {
       </div>
     </div>
   );
-}
+};
 
 export default Dashboard;
