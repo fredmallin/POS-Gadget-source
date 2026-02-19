@@ -5,7 +5,6 @@ import { toast } from 'sonner';
 import '../../index.css';
 
 const Preferences = () => {
-  // Provide a safe default in case lowStockThreshold is undefined
   const { lowStockThreshold = 5, setLowStockThreshold } = usePOS();
   const [threshold, setThreshold] = useState(lowStockThreshold.toString());
 
@@ -29,7 +28,6 @@ const Preferences = () => {
         <p>Configure system settings and preferences</p>
       </header>
 
-      {/* Inventory Settings */}
       <div className="card">
         <div className="card-header">
           <h2>
@@ -68,7 +66,6 @@ const Preferences = () => {
         </div>
       </div>
 
-      {/* System Info */}
       <div className="card">
         <div className="card-header">
           <h2>System Information</h2>

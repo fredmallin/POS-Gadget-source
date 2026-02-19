@@ -13,7 +13,7 @@ const ResetPassword = () => {
   const [loading, setLoading] = useState(false);
 
   const [searchParams] = useSearchParams();
-  const token = searchParams.get('token'); // get token from URL
+  const token = searchParams.get('token'); 
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
@@ -35,7 +35,7 @@ const ResetPassword = () => {
 
     if (result.success) {
       toast.success(result.message || 'Password reset successfully!');
-      navigate('/login'); // redirect to login after success
+      navigate('/login'); 
     } else {
       setError(result.message || 'Something went wrong.');
     }
