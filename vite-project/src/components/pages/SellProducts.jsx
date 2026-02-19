@@ -20,7 +20,6 @@ const SellProducts = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("Cash");
 
-  // Filter products safely
   const filteredProducts = products.filter((p) => {
     const term = searchTerm.toLowerCase();
     return (
@@ -30,7 +29,6 @@ const SellProducts = () => {
     );
   });
 
-  // Add to cart safely
   const handleAddToCart = (productId) => {
     const product = products.find((p) => p.id === productId);
     if (!product) return;
@@ -51,13 +49,11 @@ const SellProducts = () => {
     addToCart(product, 1);
   };
 
-  // Cart total
   const cartTotal = cart.reduce(
     (sum, item) => sum + item.price * item.quantity,
     0
   );
 
-  // Checkout
   const handleCheckout = () => {
     if (cart.length === 0) {
       alert("Cart is empty");
@@ -78,7 +74,6 @@ const SellProducts = () => {
       <h1>Sell Products</h1>
       <p>Search for products and add them to cart</p>
 
-      {/* Search */}
       <div className="search-bar">
         <Search size={18} />
         <input
@@ -91,7 +86,6 @@ const SellProducts = () => {
 
       <div className="sell-layout">
 
-        {/* PRODUCTS */}
         <div className="products-section">
           {filteredProducts.length === 0 ? (
             <p>No products found</p>
@@ -99,22 +93,22 @@ const SellProducts = () => {
             filteredProducts.map((product) => (
               <div key={product.id} className="product-card">
 
-              {/* PRODUCT IMAGE */}
-<img
-  src={product.imageUrl || "https://picsum.photos/150"}
-  alt={product.name}
-  style={{
-    width: "100%",
-    height: "140px",
-    objectFit: "cover",
-    borderRadius: "8px",
-    marginBottom: "10px",
-  }}
-  onError={(e) => {
-    e.target.onerror = null; // prevent infinite loop
-    e.target.src = "https://picsum.photos/150"; // fallback if image fails
-  }}
-/>
+      
+                <img
+                  src={product.imageUrl || "https://picsum.photos/150"}
+                  alt={product.name}
+                  style={{
+                    width: "100%",
+                    height: "140px",
+                    objectFit: "cover",
+                    borderRadius: "8px",
+                    marginBottom: "10px",
+                  }}
+                  onError={(e) => {
+                    e.target.onerror = null; 
+                    e.target.src = "https://picsum.photos/150"; 
+                  }}
+                />
 
 
                 <h3>{product.name}</h3>
@@ -134,7 +128,6 @@ const SellProducts = () => {
           )}
         </div>
 
-        {/* CART */}
         <div className="cart-section">
           <h2>Cart ({cart.length})</h2>
 
@@ -183,7 +176,6 @@ const SellProducts = () => {
 
               <h3>Total: ${cartTotal.toFixed(2)}</h3>
 
-              {/* Payment */}
               <select
                 value={paymentMethod}
                 onChange={(e) => setPaymentMethod(e.target.value)}
