@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { usePOS } from '../../contexts/POSContext'; // adjust path
+import { usePOS } from '../../contexts/POSContext';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line
 } from 'recharts';
@@ -7,7 +7,6 @@ import { Package, DollarSign, TrendingUp, Calendar } from 'lucide-react';
 import '../../index.css';
 
 export const AdminReports = ({ reportType }) => {
-  // ✅ Provide default empty arrays to avoid crashes
   const { products = [], sales = [] } = usePOS();
 
   const paidSales = sales.filter(s => s.status === 'Paid');
@@ -16,7 +15,6 @@ export const AdminReports = ({ reportType }) => {
   const totalProducts = products.length;
   const totalStockUnits = products.reduce((sum, p) => sum + (p.stock || 0), 0);
 
-  // Sales by last 7 days
   const salesByDay = useMemo(() => {
     const last7Days = Array.from({ length: 7 }, (_, i) => {
       const d = new Date();
@@ -35,7 +33,6 @@ export const AdminReports = ({ reportType }) => {
     });
   }, [paidSales]);
 
-  // Products by category
   const productsByCategory = useMemo(() => {
     const categories = [...new Set(products.map(p => p.category || 'Uncategorized'))];
     return categories.map(cat => {
@@ -49,7 +46,6 @@ export const AdminReports = ({ reportType }) => {
     });
   }, [products]);
 
-  // Top selling products
   const topProducts = useMemo(() => {
     const productSales = new Map();
     paidSales.forEach(sale => {
@@ -82,9 +78,6 @@ export const AdminReports = ({ reportType }) => {
           ? 'Sales performance and revenue analytics'
           : 'Inventory value and financial overview'}
       </p>
-
-      {/* -- The rest of your charts and cards remain unchanged -- */}
-      {/* Just make sure every access to product.price, product.stock, sale.total, or sale.items uses optional chaining or default values */}
     </div>
   );
 };

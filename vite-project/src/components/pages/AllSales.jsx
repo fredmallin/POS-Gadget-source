@@ -6,11 +6,8 @@ export default function AllSales() {
   const { sales } = usePOS();
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedSale, setSelectedSale] = useState(null);
-
-  // Only show paid/completed sales
   const paidSales = sales.filter((s) => String(s.status || "").toLowerCase() === "paid");
 
- // Filter sales by search term (cashier name, payment method, or item names)
 const filteredSales = paidSales
   .filter((sale) => {
     const name = String(sale.userName || "").toLowerCase();
@@ -27,7 +24,6 @@ const filteredSales = paidSales
       itemsMatch
     );
   })
-  // Sort newest to oldest
   .sort((a, b) => new Date(b.date) - new Date(a.date));
 
 
@@ -36,7 +32,6 @@ const filteredSales = paidSales
   const openModal = (sale) => setSelectedSale(sale);
   const closeModal = () => setSelectedSale(null);
 
-  // Helper to format items in table
   const formatItems = (items = []) => {
     return items
       .map((item) => `${item.productName || "Item"} (${item.quantity || 0})`)
@@ -48,7 +43,6 @@ const filteredSales = paidSales
       <h1>All Sales</h1>
       <p>View and search all completed sales</p>
 
-      {/* Summary Cards */}
       <div className="summary-cards">
         <div className="card">
           <p>Total Sales</p>
@@ -66,7 +60,6 @@ const filteredSales = paidSales
         </div>
       </div>
 
-      {/* Search Box */}
       <input
         type="text"
         placeholder="Search sales..."
@@ -75,7 +68,6 @@ const filteredSales = paidSales
         onChange={(e) => setSearchTerm(e.target.value)}
       />
 
-      {/* Sales Table */}
       <table className="sales-table">
         <thead>
           <tr>
@@ -111,7 +103,6 @@ const filteredSales = paidSales
         </tbody>
       </table>
 
-      {/* Modal */}
       {selectedSale && (
         <div className="modal-overlay" onClick={closeModal}>
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
