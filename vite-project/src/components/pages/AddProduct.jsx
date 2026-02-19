@@ -21,7 +21,7 @@ export const AddProduct = () => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
-  // Handle file upload (desktop + phone gallery + camera)
+  // Handle file upload 
   const handleImageUpload = (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -62,7 +62,6 @@ export const AddProduct = () => {
 
     toast.success('Product added successfully!');
 
-    // Reset form
     setFormData({
       name: '',
       price: '',
@@ -144,7 +143,6 @@ export const AddProduct = () => {
               />
             </div>
 
-            {/* IMAGE UPLOAD */}
             <div className="form-group">
               <label>Product Image (optional)</label>
 
