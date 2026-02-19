@@ -22,7 +22,6 @@ const ChangePassword = () => {
   const firstLoginUsername = location.state?.username;
 
   useEffect(() => {
-    // Redirect to login if user not logged in
     if (!user && !firstLoginUsername) {
       navigate("/login");
     }
@@ -32,7 +31,6 @@ const ChangePassword = () => {
     e.preventDefault();
     setError("");
 
-    // Validation
     if (!firstLoginUsername && !formData.oldPassword) {
       setError("Current password is required");
       return;
@@ -56,7 +54,6 @@ const ChangePassword = () => {
     setLoading(true);
 
     try {
-      // Send empty string if first-login (old password not required)
       const oldPasswordToSend = formData.oldPassword || "";
 
       const result = await changePassword(oldPasswordToSend, formData.newPassword);
@@ -64,10 +61,8 @@ const ChangePassword = () => {
       if (result.success) {
         toast.success(result.message || "Password updated successfully!");
 
-        // Reset form
         setFormData({ oldPassword: "", newPassword: "", confirmPassword: "" });
 
-        // Redirect after password change
         navigate("/dashboard");
       } else {
         setError(result.message || "Current password is incorrect");

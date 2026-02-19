@@ -15,23 +15,18 @@ import {
 const Dashboard = ({ onNavigate }) => {
   const { sales, pendingOrders, products, clearSales, user, setUser, token } = usePOS();
 
-  // ----------------------------
-  // State for "re-enter password"
-  // ----------------------------
+
   const [authenticated, setAuthenticated] = useState(false);
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
 
-  // ----------------------------
-  // Re-login handler (verify password)
-  // ----------------------------
   const handleRelogin = async () => {
     try {
       const res = await fetch("https://pos-gadget-source-4.onrender.com/api/relogin", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}` // use same token from login
+          "Authorization": `Bearer ${token}` 
         },
         body: JSON.stringify({ password })
       });
@@ -41,7 +36,7 @@ const Dashboard = ({ onNavigate }) => {
       if (res.ok && data.user) {
         setAuthenticated(true);
         setError("");
-        setUser(data.user); // <-- update user context
+        setUser(data.user); 
       } else {
         setError(data.error || "Incorrect password");
       }
@@ -51,9 +46,6 @@ const Dashboard = ({ onNavigate }) => {
     }
   };
 
-  // ----------------------------
-  // Dashboard calculations
-  // ----------------------------
   const today = new Date().toDateString();
 
   const todaySales = useMemo(() =>
@@ -105,9 +97,6 @@ const Dashboard = ({ onNavigate }) => {
 
   const formatItems = items => items.map(i => `${i.productName||'Item'} (${i.quantity||1})`).join(', ');
 
-  // ----------------------------
-  // Render password first
-  // ----------------------------
   if (!authenticated) {
     return (
       <div className="dashboard-login">
@@ -124,9 +113,7 @@ const Dashboard = ({ onNavigate }) => {
     );
   }
 
-  // ----------------------------
-  // Render dashboard
-  // ----------------------------
+  
   return (
     <div className="dashboard">
       <div className="dashboard-header">
