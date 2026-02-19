@@ -4,17 +4,14 @@ import { Warehouse, Search } from 'lucide-react';
 import '../../index.css';
 
 export const AllStock = () => {
-  const { products = [] } = usePOS(); // safe default
+  const { products = [] } = usePOS(); 
   const [searchTerm, setSearchTerm] = useState('');
-
-  // Filter products safely
   const filteredProducts = (products || []).filter(
     (p) =>
       (p.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
       (p.category || '').toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  // Compute total stock value and total items safely
   const totalStockValue = (products || []).reduce(
     (sum, p) => sum + ((p.price || 0) * (p.stock || 0)),
     0
@@ -22,7 +19,6 @@ export const AllStock = () => {
 
   const totalItems = (products || []).reduce((sum, p) => sum + (p.stock || 0), 0);
 
-  // Categories for breakdown
   const categories = [...new Set((products || []).map(p => p.category || 'Uncategorized'))];
 
   const categoryStats = categories.map(cat => {
@@ -41,7 +37,6 @@ export const AllStock = () => {
         <p className="page-subtitle">Complete overview of your inventory</p>
       </div>
 
-      {/* Summary */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="card">
           <div className="card-content">
@@ -63,7 +58,6 @@ export const AllStock = () => {
         </div>
       </div>
 
-      {/* Category Breakdown */}
       <div className="card">
         <div className="card-header">
           <h3>Stock by Category</h3>
@@ -81,7 +75,6 @@ export const AllStock = () => {
         </div>
       </div>
 
-      {/* Stock Table */}
       <div className="card">
         <div className="card-header flex-between">
           <h3 className="flex">
