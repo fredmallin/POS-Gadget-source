@@ -40,7 +40,6 @@ const LowStock = ({ onNavigate }) => {
         </div>
       </div>
 
-      {/* No Low Stock */}
       {lowStockProducts.length === 0 ? (
         <div className="card empty-card">
           <Package size={48} />
@@ -106,7 +105,6 @@ const LowStock = ({ onNavigate }) => {
         </div>
       )}
 
-      {/* Admin CTA */}
       {isAdmin && lowStockProducts.length > 0 && (
         <div className="card cta-card">
           <div>
