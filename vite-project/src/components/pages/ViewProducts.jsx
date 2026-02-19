@@ -18,14 +18,12 @@ export const ViewProducts = () => {
     imageUrl: '',
   });
 
-  // Filter products
   const filteredProducts = products.filter(p =>
     p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     p.category.toLowerCase().includes(searchTerm.toLowerCase()) ||
     p.sku?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  // Open edit dialog
   const handleEditClick = (product) => {
     setEditingProduct(product);
     setEditForm({
@@ -38,7 +36,6 @@ export const ViewProducts = () => {
     });
   };
 
-  // Handle image upload (gallery + camera)
   const handleImageUpload = (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -59,7 +56,6 @@ export const ViewProducts = () => {
     reader.readAsDataURL(file);
   };
 
-  // Submit edit form
   const handleEditSubmit = (e) => {
     e.preventDefault();
 
@@ -76,7 +72,6 @@ export const ViewProducts = () => {
     setEditingProduct(null);
   };
 
-  // Delete product
   const handleDelete = (id, name) => {
     deleteProduct(id);
     toast.success(`Deleted ${name}`);
@@ -179,7 +174,6 @@ export const ViewProducts = () => {
             </table>
           )}
 
-          {/* EDIT DIALOG */}
           {editingProduct && (
             <div className="dialog-overlay">
               <div className="dialog">
