@@ -19,7 +19,6 @@ const ChangePassword = () => {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  // If first-login, old password can be empty
   const firstLoginUsername = location.state?.username;
 
   useEffect(() => {
