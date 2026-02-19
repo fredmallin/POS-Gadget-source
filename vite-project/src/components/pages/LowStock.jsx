@@ -6,10 +6,9 @@ import { toast } from 'sonner';
 import '../../index.css';
 
 const LowStock = ({ onNavigate }) => {
-  const { products = [], lowStockThreshold = 5, updateProduct } = usePOS(); // safe defaults
+  const { products = [], lowStockThreshold = 5, updateProduct } = usePOS(); 
   const { isAdmin } = useAuth();
 
-  // Compute low stock products safely
   const lowStockProducts = (products || []).filter(
     (p) => (p.stock || 0) <= lowStockThreshold
   );
@@ -28,7 +27,6 @@ const LowStock = ({ onNavigate }) => {
         </p>
       </div>
 
-      {/* Warning Card */}
       <div className="warning-card">
         <div className="warning-icon">
           <AlertTriangle />
