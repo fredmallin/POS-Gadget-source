@@ -26,7 +26,6 @@ export const PendingOrders = () => {
   const [customerName, setCustomerName] = useState('');
   const [notes, setNotes] = useState('');
 
-  // 🔥 TEMP: ensure user exists for testing
   useEffect(() => {
     if (!user) {
       const fakeUser = { id: 'test-user', username: 'tester' };
@@ -82,7 +81,6 @@ export const PendingOrders = () => {
     <div className="pending-orders-page">
       <h1>Pending Orders</h1>
 
-      {/* Customer */}
       <input
         type="text"
         placeholder="Customer name"
@@ -91,7 +89,6 @@ export const PendingOrders = () => {
         className="input"
       />
 
-      {/* Notes */}
       <input
         type="text"
         placeholder="Notes (optional)"
@@ -100,7 +97,6 @@ export const PendingOrders = () => {
         className="input"
       />
 
-      {/* Product Search */}
       <input
         type="text"
         placeholder="Search product..."
@@ -109,7 +105,6 @@ export const PendingOrders = () => {
         className="input"
       />
 
-      {/* Product List */}
       {productSearch && !selectedProduct && (
         <ul className="product-search-list">
           {filteredProducts.length > 0 ? (
@@ -124,7 +119,6 @@ export const PendingOrders = () => {
         </ul>
       )}
 
-      {/* Selected Product */}
       {selectedProduct && (
         <div className="selected-product-form">
           <p>Selected: {selectedProduct.name}</p>
@@ -138,7 +132,6 @@ export const PendingOrders = () => {
         </div>
       )}
 
-      {/* Cart */}
       {cart.length > 0 && (
         <div>
           <h3>Items to Save</h3>
@@ -154,7 +147,6 @@ export const PendingOrders = () => {
         </div>
       )}
 
-      {/* Pending Orders Table */}
       <h2>Pending Orders ({pendingOrders?.length || 0})</h2>
       {pendingOrders?.length === 0 ? (
         <p>No pending orders yet.</p>
@@ -170,7 +162,7 @@ export const PendingOrders = () => {
           </thead>
           <tbody>
             {pendingOrders
-              .filter(Boolean) // remove null entries
+              .filter(Boolean) 
               .map(order => (
                 <tr key={order.id}>
                   <td>{order.customerName || "Unknown"}</td>
