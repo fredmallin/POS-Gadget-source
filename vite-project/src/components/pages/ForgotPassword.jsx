@@ -1,4 +1,3 @@
-// src/components/pages/ForgotPassword.jsx
 import React, { useState } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { Mail, AlertCircle } from 'lucide-react';
