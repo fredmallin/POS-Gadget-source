@@ -1,4 +1,3 @@
-// src/pages/ChangePassword.jsx
 import React, { useState, useEffect } from "react";
 import { useAuth } from "../../contexts/AuthContext";
 import { Lock, CheckCircle } from "lucide-react";
