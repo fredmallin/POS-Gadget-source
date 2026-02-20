@@ -17,6 +17,7 @@ CORS(
     resources={
         r"/api/*": {
             "origins": [
+                "http://localhost:5173",
                 "https://pos-gadget-source-c5lo.vercel.app",
                 "https://pos-gadget-source-xcwz.vercel.app"
             ]

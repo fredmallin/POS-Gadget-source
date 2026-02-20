@@ -143,7 +143,7 @@ const filteredSales = paidSales
             </div>
 
             <div className="modal-total">
-              <strong>Total: ${Number(selectedSale.total || 0).toFixed(2)}</strong>
+              <strong>Total: ksh{Number(selectedSale.total || 0).toFixed(2)}</strong>
             </div>
           </div>
         </div>

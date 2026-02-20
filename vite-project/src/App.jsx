@@ -14,12 +14,10 @@ import { AddProduct } from "./components/pages/AddProduct";
 import { ViewProducts } from "./components/pages/ViewProducts";
 import SearchProducts from "./components/pages/SearchProducts";
 
-import { AllStock } from "./components/pages/AllStock";
 import LowStock from "./components/pages/LowStock";
 
 import ChangePassword from "./components/pages/ChangePassword";
 import Preferences from "./components/pages/Preferences";
-import { AdminReports } from "./components/pages/AdminReports";
 
 import ForgotPassword from "./components/pages/ForgotPassword";
 import ResetPassword from "./components/pages/ResetPassword";
@@ -53,20 +51,13 @@ const AppContent = () => {
         return <ViewProducts />;
       case "search-products":
         return <SearchProducts />;
-      case "all-stock":
-        return <AllStock />;
       case "low-stock":
         return <LowStock onNavigate={setActiveItem} />;
       case "change-password":
         return <ChangePassword />;
       case "preferences":
         return <Preferences />;
-      case "total-goods":
-        return <AdminReports reportType="total-goods" />;
-      case "total-sales":
-        return <AdminReports reportType="total-sales" />;
-      case "stock-value":
-        return <AdminReports reportType="stock-value" />;
+      
       default:
         return <Dashboard key={sales.length} onNavigate={setActiveItem} />;
     }

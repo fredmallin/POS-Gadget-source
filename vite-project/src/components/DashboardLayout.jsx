@@ -48,7 +48,6 @@ export const DashboardLayout = ({ children, activeItem, onMenuItemClick }) => {
     {
       title: 'Stock',
       items: [
-        { id: 'all-stock', label: 'All Stock', icon: <Warehouse /> },
         { id: 'low-stock', label: 'Low Stock Alert', icon: <AlertTriangle /> },
       ],
     },
@@ -59,14 +58,7 @@ export const DashboardLayout = ({ children, activeItem, onMenuItemClick }) => {
         { id: 'preferences', label: 'Preferences', icon: <SlidersHorizontal /> },
       ],
     },
-    {
-      title: 'Reports',
-      items: [
-        { id: 'total-goods', label: 'Total Goods', icon: <PackageSearch /> },
-        { id: 'total-sales', label: 'Total Sales', icon: <BarChart3 /> },
-        { id: 'stock-value', label: 'Stock Value', icon: <BarChart3 /> },
-      ],
-    },
+   
   ];
 
   return (

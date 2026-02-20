@@ -5,35 +5,9 @@ const POSContext = createContext();
 export const POSProvider = ({ children }) => {
   const API_URL = "https://pos-gadget-source-4.onrender.com/api";
 
-  /* ---------------- State ---------------- */
+  /* ---------------- Helpers ---------------- */
   const generateId = () => crypto.randomUUID();
 
-  // Initialize user and token from localStorage only
-const [user, setUser] = useState(() => {
-  const saved = JSON.parse(localStorage.getItem("user"));
-  return saved || null;   // do NOT inject a test user
-});
-
-const [token, setToken] = useState(() => localStorage.getItem("token") || "");
-
-
-  const [products, setProducts] = useState([]);
-  const [cart, setCart] = useState([]);
-  const [sales, setSales] = useState([]);
-  const [pendingOrders, setPendingOrders] = useState([]);
-
-  /* ---------------- Sync token/user to localStorage ---------------- */
-  useEffect(() => {
-    if (token) localStorage.setItem("token", token);
-    else localStorage.removeItem("token");
-  }, [token]);
-
-  useEffect(() => {
-    if (user) localStorage.setItem("user", JSON.stringify(user));
-    else localStorage.removeItem("user");
-  }, [user]);
-
-  /* ---------------- Helper: fetch with auth ---------------- */
   const authFetch = async (url, options = {}) => {
     const headers = {
       "Content-Type": "application/json",
@@ -59,21 +33,96 @@ const [token, setToken] = useState(() => localStorage.getItem("token") || "");
     return res.json();
   };
 
-/* ---------------- RELOGIN ---------------- */
-const relogin = async (password) => {
+  /* ---------------- State ---------------- */
+  const [user, setUser] = useState(() => {
+    const saved = JSON.parse(localStorage.getItem("user"));
+    return saved || null;
+  });
+  const [token, setToken] = useState(() => localStorage.getItem("token") || "");
+  const [passwordMemory, setPasswordMemory] = useState(""); 
+
+  const [products, setProducts] = useState([]);
+  const [cart, setCart] = useState([]);
+  const [sales, setSales] = useState([]);
+  const [pendingOrders, setPendingOrders] = useState([]);
+
+  /* ---------------- Sync user/token ---------------- */
+  useEffect(() => {
+    if (token) localStorage.setItem("token", token);
+    else localStorage.removeItem("token");
+  }, [token]);
+
+  useEffect(() => {
+    if (user) localStorage.setItem("user", JSON.stringify(user));
+    else localStorage.removeItem("user");
+  }, [user]);
+
+  /* ---------------- LOGIN ---------------- */
+  const login = async (username, password) => {
+    try {
+      const res = await fetch(`${API_URL}/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username, password }),
+      }).then(r => r.json());
+
+      if (res.token) {
+        setUser(res.user);
+        setToken(res.token);
+        setPasswordMemory(password); // store password in memory
+        return { success: true };
+      } else {
+        return { success: false, error: res.error || "Login failed" };
+      }
+    } catch (err) {
+      return { success: false, error: "Login failed" };
+    }
+  };
+
+  /* ---------------- RELOGIN ---------------- */
+const relogin = async (password = passwordMemory) => {
+  if (!password) return { success: false, error: "Password required" };
+
+  if (!token) {
+    return { success: false, error: "No active session, please login again" };
+  }
+
   try {
-    const res = await authFetch(`${API_URL}/relogin`, {
+    const res = await fetch(`${API_URL}/relogin`, {
       method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`, // ⚡ include JWT token
+      },
       body: JSON.stringify({ password }),
-    });
-    // backend returns: { success: true, user: { id, username } }
-    return { success: true, user: res.user };
+    }).then(r => r.json());
+
+    if (res.success) {
+      setUser(res.user);
+      return { success: true, user: res.user };
+    } else {
+      return { success: false, error: res.error || "Incorrect password" };
+    }
   } catch (err) {
-    return { success: false, error: err.error || "Incorrect password" };
+    return { success: false, error: err.error || "Relogin failed" };
   }
 };
 
-  /* ---------------- Load Data ---------------- */
+  /* ---------------- CHANGE PASSWORD ---------------- */
+  const changePassword = async (oldPassword, newPassword) => {
+    try {
+      const res = await authFetch(`${API_URL}/change-password`, {
+        method: "POST",
+        body: JSON.stringify({ current_password: oldPassword, new_password: newPassword }),
+      });
+      setPasswordMemory(newPassword); 
+      return { success: true, message: res.message };
+    } catch (err) {
+      return { success: false, error: err.error || "Password change failed" };
+    }
+  };
+
+  /* ---------------- LOAD DATA ---------------- */
   useEffect(() => {
     const loadData = async () => {
       try {
@@ -82,7 +131,6 @@ const relogin = async (password) => {
           authFetch(`${API_URL}/sales`),
           authFetch(`${API_URL}/pending-orders`),
         ]);
-
         setProducts(productsData);
         setSales(salesData);
         setPendingOrders(pendingData);
@@ -118,9 +166,7 @@ const relogin = async (password) => {
         method: "PATCH",
         body: JSON.stringify(updated),
       });
-      setProducts((prev) =>
-        prev.map((p) => (p.id === id ? { ...p, ...updated } : p))
-      );
+      setProducts((prev) => prev.map((p) => (p.id === id ? { ...p, ...updated } : p)));
     } catch (err) {
       console.error("Update product failed", err);
     }
@@ -149,65 +195,27 @@ const relogin = async (password) => {
           alert(`Only ${product.stock} ${product.name} left!`);
           return prev;
         }
-
-        return prev.map((i) =>
-          i.productId === product.id ? { ...i, quantity: newQty } : i
-        );
+        return prev.map((i) => (i.productId === product.id ? { ...i, quantity: newQty } : i));
       }
 
-      return [
-        ...prev,
-        {
-          productId: product.id,
-          productName: product.name,
-          price: Number(product.price),
-          quantity,
-        },
-      ];
+      return [...prev, { productId: product.id, productName: product.name, price: Number(product.price), quantity }];
     });
   };
 
-  const removeFromCart = (productId) =>
-    setCart((prev) => prev.filter((i) => i.productId !== productId));
-
+  const removeFromCart = (productId) => setCart((prev) => prev.filter((i) => i.productId !== productId));
   const updateCartItemQuantity = (productId, quantity) =>
-    quantity <= 0
-      ? removeFromCart(productId)
-      : setCart((prev) =>
-          prev.map((i) =>
-            i.productId === productId ? { ...i, quantity } : i
-          )
-        );
-
+    quantity <= 0 ? removeFromCart(productId) : setCart((prev) => prev.map((i) => (i.productId === productId ? { ...i, quantity } : i)));
   const clearCart = () => setCart([]);
 
   /* ---------------- CHECKOUT ---------------- */
   const checkout = async (paymentMethod = "Cash") => {
-    if (cart.length === 0) return;
-
-    if (!user?.id) {
-      alert("No user available for checkout.");
-      return;
-    }
+    if (cart.length === 0 || !user?.id) return;
 
     const total = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
-
-    const newSale = {
-      id: generateId(),
-      userId: user.id,
-      userName: user.username,
-      paymentMethod,
-      date: new Date().toISOString(),
-      items: [...cart],
-      total,
-      status: "Paid",
-    };
+    const newSale = { id: generateId(), userId: user.id, userName: user.username, paymentMethod, date: new Date().toISOString(), items: [...cart], total, status: "Paid" };
 
     try {
-      const saved = await authFetch(`${API_URL}/sales`, {
-        method: "POST",
-        body: JSON.stringify(newSale),
-      });
+      const saved = await authFetch(`${API_URL}/sales`, { method: "POST", body: JSON.stringify(newSale) });
       setSales((prev) => [...prev, saved]);
 
       setProducts((prev) =>
@@ -217,7 +225,6 @@ const relogin = async (password) => {
           return { ...p, stock: Math.max(0, p.stock - cartItem.quantity) };
         })
       );
-
       setCart([]);
     } catch (err) {
       console.error("Checkout failed", err);
@@ -229,22 +236,10 @@ const relogin = async (password) => {
     if (cart.length === 0) return;
 
     const total = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
-
-    const newPending = {
-      id: generateId(),
-      customerName: customerName || "Unknown",
-      notes,
-      date: new Date().toISOString(),
-      items: [...cart],
-      total,
-      status: "Pending",
-    };
+    const newPending = { id: generateId(), customerName: customerName || "Unknown", notes, date: new Date().toISOString(), items: [...cart], total, status: "Pending" };
 
     try {
-      const saved = await authFetch(`${API_URL}/pending-orders`, {
-        method: "POST",
-        body: JSON.stringify(newPending),
-      });
+      const saved = await authFetch(`${API_URL}/pending-orders`, { method: "POST", body: JSON.stringify(newPending) });
       setPendingOrders((prev) => [...prev, saved]);
       setCart([]);
     } catch (err) {
@@ -253,30 +248,15 @@ const relogin = async (password) => {
   };
 
   const completePendingOrder = async (orderId, paymentMethod = "Cash") => {
-    if (!user?.id) {
-      alert("No user available for completing order.");
-      return;
-    }
+    if (!user?.id) return;
 
     const order = pendingOrders.find((o) => o.id === orderId);
     if (!order) return;
 
-    const completedSale = {
-      id: generateId(),
-      userId: user.id,
-      userName: user.username,
-      paymentMethod,
-      date: new Date().toISOString(),
-      items: order.items,
-      total: order.total,
-      status: "Paid",
-    };
+    const completedSale = { id: generateId(), userId: user.id, userName: user.username, paymentMethod, date: new Date().toISOString(), items: order.items, total: order.total, status: "Paid" };
 
     try {
-      const saved = await authFetch(`${API_URL}/sales`, {
-        method: "POST",
-        body: JSON.stringify(completedSale),
-      });
+      const saved = await authFetch(`${API_URL}/sales`, { method: "POST", body: JSON.stringify(completedSale) });
       setSales((prev) => [...prev, saved]);
 
       setProducts((prev) =>
@@ -326,7 +306,9 @@ const relogin = async (password) => {
         setUser,
         token,
         setToken,
-         relogin,
+        login,
+        relogin,
+        changePassword,
       }}
     >
       {children}
