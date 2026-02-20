@@ -43,23 +43,6 @@ const filteredSales = paidSales
       <h1>All Sales</h1>
       <p>View and search all completed sales</p>
 
-      <div className="summary-cards">
-        <div className="card">
-          <p>Total Sales</p>
-          <h2>{paidSales.length}</h2>
-        </div>
-        <div className="card">
-          <p>Total Revenue</p>
-          <h2>${totalRevenue.toFixed(2)}</h2>
-        </div>
-        <div className="card">
-          <p>Average Sale</p>
-          <h2>
-            ${paidSales.length > 0 ? (totalRevenue / paidSales.length).toFixed(2) : "0.00"}
-          </h2>
-        </div>
-      </div>
-
       <input
         type="text"
         placeholder="Search sales..."
