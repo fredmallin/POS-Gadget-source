@@ -7,7 +7,7 @@ const BACKEND_URL = "https://pos-gadget-source-4.onrender.com"; // adjust if you
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true); // ✅ start as loading
+  const [loading, setLoading] = useState(true); 
 
   // ----------------- Load user from localStorage on mount -----------------
   useEffect(() => {

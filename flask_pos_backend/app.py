@@ -84,8 +84,11 @@ def init_db():
     conn.commit()
     conn.close()
 
-init_db()
+from flask import g
 
+@app.before_first_request
+def initialize_database():
+    init_db()
 # HELPERS 
 def query_db(query, args=(), fetchone=False):
     conn = sqlite3.connect(DB_PATH)
@@ -285,42 +288,57 @@ def sales_route():
     )
     return jsonify({"id": sale_id, **data}), 200
 
-@app.route("/api/relogin", methods=["POST", "OPTIONS"])
+# unlock dashboard
+@app.route("/api/unlock-dashboard", methods=["POST", "OPTIONS"])
 @token_required
-def relogin(decoded):
+def unlock_dashboard(decoded):
     if request.method == "OPTIONS":
         return '', 200
 
-    user_id = decoded["user_id"]
     data = request.get_json()
-    password = data.get("password") 
+    password = data.get("password")
 
     if not password:
-        return jsonify({"error": "Password is required"}), 400
+        return jsonify({"error": "Password required"}), 400
+
+    user_id = decoded["user_id"]
 
     user = query_db(
-        "SELECT id, username, password_hash FROM users WHERE id=?",
+        "SELECT dashboard_password_hash FROM users WHERE id=?",
         (user_id,),
         fetchone=True
     )
 
-    if not user:
-        return jsonify({"error": "User not found"}), 404
+    if not user or not user[0]:
+        return jsonify({"error": "Dashboard password not set"}), 400
 
-    user_id, username, password_hash = user
+    if not check_password_hash(user[0], password):
+        return jsonify({"error": "Incorrect dashboard password"}), 401
 
-    # Check password
-    if not check_password_hash(password_hash, password):
-        return jsonify({"error": "Incorrect password"}), 401
+    return jsonify({"success": True}), 200
 
-    return jsonify({
-        "success": True,
-        "user": {
-            "id": user_id,
-            "username": username
-        }
-    }), 200
+# dashboard password change
+@app.route("/api/change-dashboard-password", methods=["POST", "OPTIONS"])
+@token_required
+def change_dashboard_password(decoded):
+    if request.method == "OPTIONS":
+        return '', 200
 
+    data = request.get_json()
+    new_password = data.get("new_password")
+
+    if not new_password:
+        return jsonify({"error": "New password required"}), 400
+
+    user_id = decoded["user_id"]
+    new_hash = generate_password_hash(new_password)
+
+    query_db(
+        "UPDATE users SET dashboard_password_hash=? WHERE id=?",
+        (new_hash, user_id)
+    )
+
+    return jsonify({"message": "Dashboard password updated"}), 200
 
 #  PENDING ORDERS
 @app.route("/api/pending-orders", methods=["GET", "POST", "OPTIONS"])
@@ -371,4 +389,4 @@ def home():
     return jsonify({"message": "Flask POS Backend is running"}), 200
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000, debug=True)
+    app.run(host="0.0.0.0", port=5000)

@@ -8,6 +8,7 @@ export const POSProvider = ({ children }) => {
   /* ---------------- Helpers ---------------- */
   const generateId = () => crypto.randomUUID();
 
+  // Authenticated fetch helper
   const authFetch = async (url, options = {}) => {
     const headers = {
       "Content-Type": "application/json",
@@ -18,6 +19,7 @@ export const POSProvider = ({ children }) => {
     const res = await fetch(url, { ...options, headers });
 
     if (res.status === 401) {
+      // Clear session if unauthorized
       setUser(null);
       setToken("");
       localStorage.removeItem("user");
@@ -39,7 +41,7 @@ export const POSProvider = ({ children }) => {
     return saved || null;
   });
   const [token, setToken] = useState(() => localStorage.getItem("token") || "");
-  const [passwordMemory, setPasswordMemory] = useState(""); 
+  const [passwordMemory, setPasswordMemory] = useState("");
 
   const [products, setProducts] = useState([]);
   const [cart, setCart] = useState([]);
@@ -69,7 +71,7 @@ export const POSProvider = ({ children }) => {
       if (res.token) {
         setUser(res.user);
         setToken(res.token);
-        setPasswordMemory(password); // store password in memory
+        setPasswordMemory(password); 
         return { success: true };
       } else {
         return { success: false, error: res.error || "Login failed" };
@@ -79,34 +81,19 @@ export const POSProvider = ({ children }) => {
     }
   };
 
-  /* ---------------- RELOGIN ---------------- */
-const relogin = async (password = passwordMemory) => {
-  if (!password) return { success: false, error: "Password required" };
-
-  if (!token) {
-    return { success: false, error: "No active session, please login again" };
-  }
-
+  const unlockDashboard = async (password) => {
   try {
-    const res = await fetch(`${API_URL}/relogin`, {
+    const res = await authFetch(`${API_URL}/unlock-dashboard`, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${token}`, // ⚡ include JWT token
-      },
       body: JSON.stringify({ password }),
-    }).then(r => r.json());
+    });
 
-    if (res.success) {
-      setUser(res.user);
-      return { success: true, user: res.user };
-    } else {
-      return { success: false, error: res.error || "Incorrect password" };
-    }
+    return { success: true };
   } catch (err) {
-    return { success: false, error: err.error || "Relogin failed" };
+    return { success: false, error: err.error || "Unlock failed" };
   }
 };
+
 
   /* ---------------- CHANGE PASSWORD ---------------- */
   const changePassword = async (oldPassword, newPassword) => {
@@ -115,7 +102,7 @@ const relogin = async (password = passwordMemory) => {
         method: "POST",
         body: JSON.stringify({ current_password: oldPassword, new_password: newPassword }),
       });
-      setPasswordMemory(newPassword); 
+      setPasswordMemory(newPassword);
       return { success: true, message: res.message };
     } catch (err) {
       return { success: false, error: err.error || "Password change failed" };
@@ -138,7 +125,6 @@ const relogin = async (password = passwordMemory) => {
         console.error("Failed to load POS data", err);
       }
     };
-
     if (token) loadData();
   }, [token]);
 
@@ -154,7 +140,7 @@ const relogin = async (password = passwordMemory) => {
           price: Number(product.price || 0),
         }),
       });
-      setProducts((prev) => [...prev, saved]);
+      setProducts(prev => [...prev, saved]);
     } catch (err) {
       console.error("Add product failed", err);
     }
@@ -166,7 +152,7 @@ const relogin = async (password = passwordMemory) => {
         method: "PATCH",
         body: JSON.stringify(updated),
       });
-      setProducts((prev) => prev.map((p) => (p.id === id ? { ...p, ...updated } : p)));
+      setProducts(prev => prev.map(p => (p.id === id ? { ...p, ...updated } : p)));
     } catch (err) {
       console.error("Update product failed", err);
     }
@@ -175,7 +161,7 @@ const relogin = async (password = passwordMemory) => {
   const deleteProduct = async (id) => {
     try {
       await authFetch(`${API_URL}/products/${id}`, { method: "DELETE" });
-      setProducts((prev) => prev.filter((p) => p.id !== id));
+      setProducts(prev => prev.filter(p => p.id !== id));
     } catch (err) {
       console.error("Delete product failed", err);
     }
@@ -186,61 +172,81 @@ const relogin = async (password = passwordMemory) => {
     if (!product || quantity <= 0) return;
     if (product.stock <= 0) return alert(`${product.name} is out of stock!`);
 
-    setCart((prev) => {
-      const existing = prev.find((i) => i.productId === product.id);
-
+    setCart(prev => {
+      const existing = prev.find(i => i.productId === product.id);
       if (existing) {
         const newQty = existing.quantity + quantity;
         if (newQty > product.stock) {
           alert(`Only ${product.stock} ${product.name} left!`);
           return prev;
         }
-        return prev.map((i) => (i.productId === product.id ? { ...i, quantity: newQty } : i));
+        return prev.map(i => (i.productId === product.id ? { ...i, quantity: newQty } : i));
       }
-
       return [...prev, { productId: product.id, productName: product.name, price: Number(product.price), quantity }];
     });
   };
 
-  const removeFromCart = (productId) => setCart((prev) => prev.filter((i) => i.productId !== productId));
+  const removeFromCart = (productId) => setCart(prev => prev.filter(i => i.productId !== productId));
   const updateCartItemQuantity = (productId, quantity) =>
-    quantity <= 0 ? removeFromCart(productId) : setCart((prev) => prev.map((i) => (i.productId === productId ? { ...i, quantity } : i)));
+    quantity <= 0 ? removeFromCart(productId) : setCart(prev => prev.map(i => (i.productId === productId ? { ...i, quantity } : i)));
   const clearCart = () => setCart([]);
 
-  /* ---------------- CHECKOUT ---------------- */
   const checkout = async (paymentMethod = "Cash") => {
-    if (cart.length === 0 || !user?.id) return;
+  if (cart.length === 0 || !user?.id) return;
 
-    const total = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
-    const newSale = { id: generateId(), userId: user.id, userName: user.username, paymentMethod, date: new Date().toISOString(), items: [...cart], total, status: "Paid" };
+  const total = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
 
-    try {
-      const saved = await authFetch(`${API_URL}/sales`, { method: "POST", body: JSON.stringify(newSale) });
-      setSales((prev) => [...prev, saved]);
-
-      setProducts((prev) =>
-        prev.map((p) => {
-          const cartItem = cart.find((i) => i.productId === p.id);
-          if (!cartItem) return p;
-          return { ...p, stock: Math.max(0, p.stock - cartItem.quantity) };
-        })
-      );
-      setCart([]);
-    } catch (err) {
-      console.error("Checkout failed", err);
-    }
+  const newSale = {
+    id: generateId(),
+    userId: user.id,
+    userName: user.username,
+    paymentMethod,
+    date: new Date().toISOString(),
+    items: [...cart],
+    total,
+    status: "Paid",
   };
 
+  try {
+    // 1️⃣ Save sale
+    const saved = await authFetch(`${API_URL}/sales`, {
+      method: "POST",
+      body: JSON.stringify(newSale),
+    });
+
+    setSales(prev => [...prev, saved]);
+
+    // 2️⃣ Update stock in backend
+for (const item of newSale.items) {
+  const product = products.find(p => p.id === item.productId);
+  if (!product) continue;
+
+  const newStock = Math.max(0, product.stock - item.quantity);
+
+  await authFetch(`${API_URL}/products/${product.id}`, {
+    method: "PATCH",
+    body: JSON.stringify({ stock: newStock }),
+  });
+}
+
+// Reload products from backend
+const updatedProducts = await authFetch(`${API_URL}/products`);
+setProducts(updatedProducts);
+    setCart([]);
+
+  } catch (err) {
+    console.error("Checkout failed", err);
+  }
+};
   /* ---------------- PENDING ORDERS ---------------- */
   const savePending = async (customerName, notes = "") => {
     if (cart.length === 0) return;
-
     const total = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
     const newPending = { id: generateId(), customerName: customerName || "Unknown", notes, date: new Date().toISOString(), items: [...cart], total, status: "Pending" };
 
     try {
       const saved = await authFetch(`${API_URL}/pending-orders`, { method: "POST", body: JSON.stringify(newPending) });
-      setPendingOrders((prev) => [...prev, saved]);
+      setPendingOrders(prev => [...prev, saved]);
       setCart([]);
     } catch (err) {
       console.error("Save pending failed", err);
@@ -250,25 +256,25 @@ const relogin = async (password = passwordMemory) => {
   const completePendingOrder = async (orderId, paymentMethod = "Cash") => {
     if (!user?.id) return;
 
-    const order = pendingOrders.find((o) => o.id === orderId);
+    const order = pendingOrders.find(o => o.id === orderId);
     if (!order) return;
 
     const completedSale = { id: generateId(), userId: user.id, userName: user.username, paymentMethod, date: new Date().toISOString(), items: order.items, total: order.total, status: "Paid" };
 
     try {
       const saved = await authFetch(`${API_URL}/sales`, { method: "POST", body: JSON.stringify(completedSale) });
-      setSales((prev) => [...prev, saved]);
+      setSales(prev => [...prev, saved]);
 
-      setProducts((prev) =>
-        prev.map((p) => {
-          const item = order.items.find((i) => i.productId === p.id);
+      setProducts(prev =>
+        prev.map(p => {
+          const item = order.items.find(i => i.productId === p.id);
           if (!item) return p;
           return { ...p, stock: Math.max(0, p.stock - item.quantity) };
         })
       );
 
       await authFetch(`${API_URL}/pending-orders/${orderId}`, { method: "DELETE" });
-      setPendingOrders((prev) => prev.filter((o) => o.id !== orderId));
+      setPendingOrders(prev => prev.filter(o => o.id !== orderId));
     } catch (err) {
       console.error("Complete pending failed", err);
     }
@@ -277,7 +283,7 @@ const relogin = async (password = passwordMemory) => {
   const cancelPendingOrder = async (orderId) => {
     try {
       await authFetch(`${API_URL}/pending-orders/${orderId}`, { method: "DELETE" });
-      setPendingOrders((prev) => prev.filter((o) => o.id !== orderId));
+      setPendingOrders(prev => prev.filter(o => o.id !== orderId));
     } catch (err) {
       console.error("Cancel pending failed", err);
     }
@@ -307,7 +313,7 @@ const relogin = async (password = passwordMemory) => {
         token,
         setToken,
         login,
-        relogin,
+         unlockDashboard,
         changePassword,
       }}
     >

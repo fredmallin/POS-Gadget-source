@@ -155,6 +155,7 @@ export const PendingOrders = () => {
           <thead>
             <tr>
               <th>Customer</th>
+               <th>Notes</th>
               <th>Total</th>
               <th>Date</th>
               <th>Actions</th>
@@ -166,6 +167,7 @@ export const PendingOrders = () => {
               .map(order => (
                 <tr key={order.id}>
                   <td>{order.customerName || "Unknown"}</td>
+                   <td>{order.notes || "-"}</td>
                   <td>${order.total?.toFixed(2) || "0.00"}</td>
                   <td>{order.date ? new Date(order.date).toLocaleString() : "-"}</td>
                   <td>
