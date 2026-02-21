@@ -84,11 +84,6 @@ def init_db():
     conn.commit()
     conn.close()
 
-from flask import g
-
-@app.before_first_request
-def initialize_database():
-    init_db()
 # HELPERS 
 def query_db(query, args=(), fetchone=False):
     conn = sqlite3.connect(DB_PATH)
@@ -389,4 +384,5 @@ def home():
     return jsonify({"message": "Flask POS Backend is running"}), 200
 
 if __name__ == "__main__":
+    init_db()  
     app.run(host="0.0.0.0", port=5000)
