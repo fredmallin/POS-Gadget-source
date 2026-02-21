@@ -18,6 +18,7 @@ CORS(
         r"/api/*": {
             "origins": [
                 "http://localhost:5173",
+                "https://pos-gadget-source-4.onrender.com", 
                 "https://pos-gadget-source-c5lo.vercel.app",
                 "https://pos-gadget-source-xcwz.vercel.app"
             ]
@@ -25,8 +26,6 @@ CORS(
     },
     supports_credentials=True
 )
-
-
 
 DB_PATH = "pos.db"
 
