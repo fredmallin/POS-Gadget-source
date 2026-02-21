@@ -10,20 +10,24 @@ import datetime
 
 app = Flask(__name__)
 app.config["SECRET_KEY"] = "supersecretkey"
+from flask import request
+from flask_cors import CORS
 
-# CORS 
+def get_cors_origin():
+    allowed_origins = [
+        "http://localhost:5173",
+        "https://pos-gadget-source-4.onrender.com", 
+        "https://pos-gadget-source-c5lo.vercel.app",
+        "https://pos-gadget-source-xcwz.vercel.app"
+    ]
+    origin = request.headers.get("Origin")
+    if origin in allowed_origins:
+        return origin
+    return None
+
 CORS(
     app,
-    resources={
-        r"/api/*": {
-            "origins": [
-                "http://localhost:5173",
-                "https://pos-gadget-source-4.onrender.com", 
-                "https://pos-gadget-source-c5lo.vercel.app",
-                "https://pos-gadget-source-xcwz.vercel.app"
-            ]
-        }
-    },
+    resources={r"/api/*": {"origins": get_cors_origin}},
     supports_credentials=True
 )
 
