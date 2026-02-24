@@ -3,7 +3,7 @@ import React, { createContext, useContext, useState, useEffect } from "react";
 const POSContext = createContext();
 
 export const POSProvider = ({ children }) => {
-  const API_URL = "https://pos-gadget-source-4.onrender.com/api";
+  const API_URL = "https://pos-gadget-source-8.onrender.com/api";
 
   /* ---------------- Helpers ---------------- */
   const generateId = () => crypto.randomUUID();
@@ -15,7 +15,7 @@ export const POSProvider = ({ children }) => {
       ...(currentToken ? { Authorization: `Bearer ${currentToken}` } : {}),
       ...options.headers,
     };
-    
+
     const res = await fetch(url, { ...options, headers });
 
     if (res.status === 401) {
