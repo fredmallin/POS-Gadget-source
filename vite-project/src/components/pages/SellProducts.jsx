@@ -65,7 +65,7 @@ const SellProducts = () => {
       return;
     }
 
-    checkout(user.id, user.name, paymentMethod);
+    checkout(paymentMethod);
     setPaymentMethod("Cash");
   };
 

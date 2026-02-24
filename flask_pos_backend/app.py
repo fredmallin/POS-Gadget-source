@@ -49,9 +49,17 @@ def init_db():
             id TEXT PRIMARY KEY,
             name TEXT,
             stock INTEGER,
-            price REAL
+            price REAL,
+            category TEXT,
+            sku TEXT,
+            image_url TEXT
         )
     ''')
+
+    # Add missing columns to existing products table (safe to run every time)
+    cur.execute("ALTER TABLE products ADD COLUMN IF NOT EXISTS category TEXT")
+    cur.execute("ALTER TABLE products ADD COLUMN IF NOT EXISTS sku TEXT")
+    cur.execute("ALTER TABLE products ADD COLUMN IF NOT EXISTS image_url TEXT")
 
     # SALES
     cur.execute('''
@@ -89,7 +97,6 @@ def init_db():
     conn.commit()
     conn.close()
 
-# NEW
 def query_db(query, args=(), fetchone=False):
     conn = connection_pool.getconn()
     try:
@@ -205,13 +212,24 @@ def products_route():
         return '', 200
 
     if request.method == "GET":
-        rows = query_db("SELECT * FROM products")
-        return jsonify([{"id": r[0], "name": r[1], "stock": r[2], "price": r[3]} for r in rows])
+        rows = query_db("SELECT id, name, stock, price, category, sku, image_url FROM products")
+        return jsonify([{
+            "id": r[0],
+            "name": r[1],
+            "stock": r[2],
+            "price": r[3],
+            "category": r[4],
+            "sku": r[5],
+            "imageUrl": r[6]
+        } for r in rows])
 
     data = request.json
     product_id = data.get("id") or str(uuid.uuid4())
-    query_db("INSERT INTO products (id, name, stock, price) VALUES (%s, %s, %s, %s)",
-             (product_id, data["name"], data["stock"], data["price"]))
+    query_db(
+        "INSERT INTO products (id, name, stock, price, category, sku, image_url) VALUES (%s, %s, %s, %s, %s, %s, %s)",
+        (product_id, data["name"], data["stock"], data["price"],
+         data.get("category"), data.get("sku"), data.get("imageUrl"))
+    )
     return jsonify({"id": product_id, **data}), 200
 
 @app.route("/api/products/<id>", methods=["PATCH", "DELETE", "OPTIONS"])
@@ -223,10 +241,13 @@ def update_delete_product(id):
         query_db("DELETE FROM products WHERE id=%s", (id,))
         return jsonify({"message": "Product deleted"}), 200
 
-    data = request.json
     if request.method == "PATCH":
-        query_db("UPDATE products SET name=%s, stock=%s, price=%s WHERE id=%s",
-                 (data.get("name"), data.get("stock"), data.get("price"), id))
+        data = request.json
+        query_db(
+            "UPDATE products SET name=%s, stock=%s, price=%s, category=%s, sku=%s, image_url=%s WHERE id=%s",
+            (data.get("name"), data.get("stock"), data.get("price"),
+             data.get("category"), data.get("sku"), data.get("imageUrl"), id)
+        )
         return jsonify({"message": "Product updated"}), 200
 
 # ----------------- SALES -----------------
@@ -253,11 +274,22 @@ def sales_route():
 
     data = request.json
     sale_id = data.get("id") or str(uuid.uuid4())
+
     query_db(
         "INSERT INTO sales (id, user_id, user_name, payment_method, date, items, total, status) VALUES (%s,%s,%s,%s,%s,%s,%s,%s)",
         (sale_id, data["userId"], data["userName"], data["paymentMethod"], data["date"],
          json.dumps(data.get("items", [])), data.get("total", 0), data.get("status", "completed"))
     )
+
+    # Deduct stock for each sold item (productId from frontend cart)
+    for item in data.get("items", []):
+        product_id = item.get("productId") or item.get("id")
+        if product_id:
+            query_db(
+                "UPDATE products SET stock = GREATEST(0, stock - %s) WHERE id = %s",
+                (item["quantity"], product_id)
+            )
+
     return jsonify({"id": sale_id, **data}), 200
 
 # ----------------- DASHBOARD -----------------
@@ -344,7 +376,7 @@ def home():
     response.headers.add("Access-Control-Allow-Origin", "*")
     return response, 200
 
-# ----------------- RUN -----------------
+init_db()
+
 if __name__ == "__main__":
-    init_db()
     app.run(host="0.0.0.0", port=5000)

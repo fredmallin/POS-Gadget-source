@@ -265,13 +265,20 @@ setProducts(updatedProducts);
       const saved = await authFetch(`${API_URL}/sales`, { method: "POST", body: JSON.stringify(completedSale) });
       setSales(prev => [...prev, saved]);
 
-      setProducts(prev =>
-        prev.map(p => {
-          const item = order.items.find(i => i.productId === p.id);
-          if (!item) return p;
-          return { ...p, stock: Math.max(0, p.stock - item.quantity) };
-        })
-      );
+      // ✅ Save updated stock to DB (not just local state)
+      for (const item of order.items) {
+        const product = products.find(p => p.id === item.productId);
+        if (!product) continue;
+        const newStock = Math.max(0, product.stock - item.quantity);
+        await authFetch(`${API_URL}/products/${product.id}`, {
+          method: "PATCH",
+          body: JSON.stringify({ stock: newStock }),
+        });
+      }
+
+      // ✅ Reload fresh from DB
+      const updatedProducts = await authFetch(`${API_URL}/products`);
+      setProducts(updatedProducts);
 
       await authFetch(`${API_URL}/pending-orders/${orderId}`, { method: "DELETE" });
       setPendingOrders(prev => prev.filter(o => o.id !== orderId));
@@ -279,7 +286,7 @@ setProducts(updatedProducts);
       console.error("Complete pending failed", err);
     }
   };
-
+  
   const cancelPendingOrder = async (orderId) => {
     try {
       await authFetch(`${API_URL}/pending-orders/${orderId}`, { method: "DELETE" });
