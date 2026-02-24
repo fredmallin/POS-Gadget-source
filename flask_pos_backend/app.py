@@ -21,9 +21,10 @@ CORS(
         "https://pos-gadget-source-c5lo.vercel.app",
         "https://pos-gadget-source-xcwz.vercel.app"
     ]}},
-    supports_credentials=True
+    supports_credentials=True,
+    methods=["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
+    allow_headers=["Content-Type", "Authorization"]
 )
-
 DATABASE_URL = os.environ.get("DATABASE_URL")
 connection_pool = pool.SimpleConnectionPool(1, 10, DATABASE_URL)
 
@@ -339,7 +340,9 @@ def delete_pending(id):
 # ----------------- HOME -----------------
 @app.route("/")
 def home():
-    return jsonify({"message": "Flask POS Backend is running"}), 200
+    response = jsonify({"message": "Flask POS Backend is running"})
+    response.headers.add("Access-Control-Allow-Origin", "*")
+    return response, 200
 
 # ----------------- RUN -----------------
 if __name__ == "__main__":
