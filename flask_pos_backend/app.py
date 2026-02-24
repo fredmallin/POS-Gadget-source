@@ -376,6 +376,19 @@ def home():
     response.headers.add("Access-Control-Allow-Origin", "*")
     return response, 200
 
+    @app.route("/api/setup", methods=["GET"])
+def setup():
+    username = "admin"
+    password = "admin123"
+    
+    existing = query_db("SELECT id FROM users WHERE username=%s", (username,), fetchone=True)
+    if existing:
+        return jsonify({"message": "User already exists"}), 200
+    
+    hashed = generate_password_hash(password)
+    query_db("INSERT INTO users (username, password_hash) VALUES (%s, %s)", (username, hashed))
+    return jsonify({"message": "User created", "username": username, "password": password}), 200
+
 init_db()
 
 if __name__ == "__main__":
