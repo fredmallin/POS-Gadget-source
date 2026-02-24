@@ -376,7 +376,7 @@ def home():
     response.headers.add("Access-Control-Allow-Origin", "*")
     return response, 200
 
-    @app.route("/api/setup", methods=["GET"])
+@app.route("/api/setup", methods=["GET"])
 def setup():
     username = "admin"
     password = "admin123"
@@ -388,6 +388,12 @@ def setup():
     hashed = generate_password_hash(password)
     query_db("INSERT INTO users (username, password_hash) VALUES (%s, %s)", (username, hashed))
     return jsonify({"message": "User created", "username": username, "password": password}), 200
+
+init_db()
+
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=5000)
+    
 
 init_db()
 
