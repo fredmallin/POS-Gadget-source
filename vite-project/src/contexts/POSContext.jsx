@@ -8,14 +8,14 @@ export const POSProvider = ({ children }) => {
   /* ---------------- Helpers ---------------- */
   const generateId = () => crypto.randomUUID();
 
-  // Authenticated fetch helper
   const authFetch = async (url, options = {}) => {
+    const currentToken = localStorage.getItem("token");
     const headers = {
       "Content-Type": "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...(currentToken ? { Authorization: `Bearer ${currentToken}` } : {}),
       ...options.headers,
     };
-
+    
     const res = await fetch(url, { ...options, headers });
 
     if (res.status === 401) {

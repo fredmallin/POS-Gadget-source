@@ -20,6 +20,10 @@ export const AuthProvider = ({ children }) => {
 
     setLoading(false); // ✅ finished checking
   }, []);
+// Add this inside AuthProvider, after the BACKEND_URL line
+useEffect(() => {
+  fetch(`${BACKEND_URL}/`).catch(() => {}); // silent wake-up ping
+}, []);
 
   // ----------------- LOGIN -----------------
   const login = async (username, password) => {

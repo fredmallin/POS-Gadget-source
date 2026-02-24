@@ -2,43 +2,43 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 from werkzeug.security import generate_password_hash, check_password_hash
-import sqlite3
+import psycopg2
+from psycopg2 import pool
+import os
 import uuid
 import json
 import jwt
 import datetime
+from functools import wraps
 
 app = Flask(__name__)
 app.config["SECRET_KEY"] = "supersecretkey"
-from flask import request
-from flask_cors import CORS
-
-from flask_cors import CORS
 
 CORS(
     app,
     resources={r"/api/*": {"origins": [
         "http://localhost:5173",
-        "https://pos-gadget-source-4.onrender.com",
         "https://pos-gadget-source-c5lo.vercel.app",
         "https://pos-gadget-source-xcwz.vercel.app"
     ]}},
     supports_credentials=True
 )
 
-DB_PATH = "pos.db"
+DATABASE_URL = os.environ.get("DATABASE_URL")
+connection_pool = pool.SimpleConnectionPool(1, 10, DATABASE_URL)
 
-# DATABASE INIT 
+# ----------------- DATABASE -----------------
 def init_db():
-    conn = sqlite3.connect(DB_PATH)
+    conn = psycopg2.connect(DATABASE_URL)
     cur = conn.cursor()
 
     # USERS
     cur.execute('''
         CREATE TABLE IF NOT EXISTS users (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            id SERIAL PRIMARY KEY,
             username TEXT UNIQUE,
-            password_hash TEXT
+            password_hash TEXT,
+            dashboard_password_hash TEXT
         )
     ''')
 
@@ -79,23 +79,30 @@ def init_db():
         )
     ''')
 
+    # INDEXES
+    cur.execute("CREATE INDEX IF NOT EXISTS idx_users_username ON users(username)")
+    cur.execute("CREATE INDEX IF NOT EXISTS idx_sales_user_id ON sales(user_id)")
+    cur.execute("CREATE INDEX IF NOT EXISTS idx_products_id ON products(id)")
+    cur.execute("CREATE INDEX IF NOT EXISTS idx_pending_orders_id ON pending_orders(id)")
+
     conn.commit()
     conn.close()
 
-# HELPERS 
+# NEW
 def query_db(query, args=(), fetchone=False):
-    conn = sqlite3.connect(DB_PATH)
-    cur = conn.cursor()
-    cur.execute(query, args)
-    if query.strip().upper().startswith("SELECT"):
-        result = cur.fetchall()
-    else:
-        result = None
-    conn.commit()
-    conn.close()
-    if fetchone:
-        return result[0] if result else None
-    return result
+    conn = connection_pool.getconn()
+    try:
+        cur = conn.cursor()
+        cur.execute(query, args)
+        if query.strip().upper().startswith("SELECT"):
+            result = cur.fetchall()
+        else:
+            result = None
+        conn.commit()
+        cur.close()
+        return result[0] if (fetchone and result) else result
+    finally:
+        connection_pool.putconn(conn)
 
 def safe_json_load(value):
     if not value:
@@ -106,8 +113,6 @@ def safe_json_load(value):
         return []
 
 def token_required(f):
-    from functools import wraps
-
     @wraps(f)
     def decorated(*args, **kwargs):
         if request.method == "OPTIONS":
@@ -123,87 +128,13 @@ def token_required(f):
         return f(decoded, *args, **kwargs)
     return decorated
 
-@app.route("/api/change-password", methods=["POST", "OPTIONS"])
-@token_required
-def change_password(decoded):
-    if request.method == "OPTIONS":
-        return '', 200
-
-    data = request.get_json()
-
-    old_password = data.get("current_password")
-    new_password = data.get("new_password")
-
-    if not old_password or not new_password:
-        return jsonify({"error": "Both old and new passwords are required"}), 400
-
-    user_id = decoded["user_id"]
-
-    user = query_db(
-        "SELECT password_hash FROM users WHERE id=?",
-        (user_id,),
-        fetchone=True
-    )
-
-    if not user:
-        return jsonify({"error": "User not found"}), 404
-
-    if not check_password_hash(user[0], old_password):
-        return jsonify({"error": "Old password is incorrect"}), 401
-
-    new_hash = generate_password_hash(new_password)
-
-    query_db(
-        "UPDATE users SET password_hash=? WHERE id=?",
-        (new_hash, user_id)
-    )
-
-    return jsonify({"message": "Password changed successfully"}), 200
-
-
-
-#PRODUCTS
-@app.route("/api/products", methods=["GET", "POST", "OPTIONS"])
-def products_route():
-    if request.method == "OPTIONS":
-        return '', 200
-
-    if request.method == "GET":
-        rows = query_db("SELECT * FROM products")
-        return jsonify([{"id": r[0], "name": r[1], "stock": r[2], "price": r[3]} for r in rows])
-
-    data = request.json
-    product_id = data.get("id") or str(uuid.uuid4())
-    query_db(
-        "INSERT INTO products (id, name, stock, price) VALUES (?, ?, ?, ?)",
-        (product_id, data["name"], data["stock"], data["price"])
-    )
-    return jsonify({"id": product_id, **data}), 200
-
-@app.route("/api/products/<id>", methods=["PATCH", "DELETE", "OPTIONS"])
-def update_delete_product(id):
-    if request.method == "OPTIONS":
-        return '', 200
-
-    data = request.json
-    if request.method == "PATCH":
-        query_db(
-            "UPDATE products SET name=?, stock=?, price=? WHERE id=?",
-            (data.get("name"), data.get("stock"), data.get("price"), id)
-        )
-        return jsonify({"message": "Product updated"}), 200
-    if request.method == "DELETE":
-        query_db("DELETE FROM products WHERE id=?", (id,))
-        return jsonify({"message": "Product deleted"}), 200
-
-        # LOGIN
+# ----------------- AUTH -----------------
 @app.route("/api/login", methods=["POST", "OPTIONS"])
 def login():
     if request.method == "OPTIONS":
         return '', 200
 
     data = request.get_json()
-
     username = data.get("username")
     password = data.get("password")
 
@@ -211,7 +142,7 @@ def login():
         return jsonify({"error": "Username and password required"}), 400
 
     user = query_db(
-        "SELECT id, password_hash FROM users WHERE username=?",
+        "SELECT id, password_hash FROM users WHERE username=%s",
         (username,),
         fetchone=True
     )
@@ -235,15 +166,69 @@ def login():
 
     return jsonify({
         "token": token,
-        "user": {
-            "id": user_id,
-            "username": username
-        }
+        "user": {"id": user_id, "username": username}
     }), 200
 
+@app.route("/api/change-password", methods=["POST", "OPTIONS"])
+@token_required
+def change_password(decoded):
+    if request.method == "OPTIONS":
+        return '', 200
 
+    data = request.get_json()
+    old_password = data.get("current_password")
+    new_password = data.get("new_password")
 
-# SALES 
+    if not old_password or not new_password:
+        return jsonify({"error": "Both old and new passwords required"}), 400
+
+    user_id = decoded["user_id"]
+
+    user = query_db("SELECT password_hash FROM users WHERE id=%s", (user_id,), fetchone=True)
+
+    if not user:
+        return jsonify({"error": "User not found"}), 404
+
+    if not check_password_hash(user[0], old_password):
+        return jsonify({"error": "Old password incorrect"}), 401
+
+    new_hash = generate_password_hash(new_password)
+    query_db("UPDATE users SET password_hash=%s WHERE id=%s", (new_hash, user_id))
+
+    return jsonify({"message": "Password changed successfully"}), 200
+
+# ----------------- PRODUCTS -----------------
+@app.route("/api/products", methods=["GET", "POST", "OPTIONS"])
+def products_route():
+    if request.method == "OPTIONS":
+        return '', 200
+
+    if request.method == "GET":
+        rows = query_db("SELECT * FROM products")
+        return jsonify([{"id": r[0], "name": r[1], "stock": r[2], "price": r[3]} for r in rows])
+
+    data = request.json
+    product_id = data.get("id") or str(uuid.uuid4())
+    query_db("INSERT INTO products (id, name, stock, price) VALUES (%s, %s, %s, %s)",
+             (product_id, data["name"], data["stock"], data["price"]))
+    return jsonify({"id": product_id, **data}), 200
+
+@app.route("/api/products/<id>", methods=["PATCH", "DELETE", "OPTIONS"])
+def update_delete_product(id):
+    if request.method == "OPTIONS":
+        return '', 200
+
+    if request.method == "DELETE":
+        query_db("DELETE FROM products WHERE id=%s", (id,))
+        return jsonify({"message": "Product deleted"}), 200
+
+    data = request.json
+    if request.method == "PATCH":
+        query_db("UPDATE products SET name=%s, stock=%s, price=%s WHERE id=%s",
+                 (data.get("name"), data.get("stock"), data.get("price"), id))
+        return jsonify({"message": "Product updated"}), 200
+
+# ----------------- SALES -----------------
 @app.route("/api/sales", methods=["GET", "POST", "OPTIONS"])
 def sales_route():
     if request.method == "OPTIONS":
@@ -264,24 +249,17 @@ def sales_route():
                 "status": r[7] or "completed"
             })
         return jsonify(sales)
+
     data = request.json
     sale_id = data.get("id") or str(uuid.uuid4())
     query_db(
-        "INSERT INTO sales (id, user_id, user_name, payment_method, date, items, total, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-        (
-            sale_id,
-            data["userId"],
-            data["userName"],
-            data["paymentMethod"],
-            data["date"],
-            json.dumps(data.get("items", [])),
-            data.get("total", 0),
-            data.get("status", "completed")
-        )
+        "INSERT INTO sales (id, user_id, user_name, payment_method, date, items, total, status) VALUES (%s,%s,%s,%s,%s,%s,%s,%s)",
+        (sale_id, data["userId"], data["userName"], data["paymentMethod"], data["date"],
+         json.dumps(data.get("items", [])), data.get("total", 0), data.get("status", "completed"))
     )
     return jsonify({"id": sale_id, **data}), 200
 
-# unlock dashboard
+# ----------------- DASHBOARD -----------------
 @app.route("/api/unlock-dashboard", methods=["POST", "OPTIONS"])
 @token_required
 def unlock_dashboard(decoded):
@@ -290,17 +268,11 @@ def unlock_dashboard(decoded):
 
     data = request.get_json()
     password = data.get("password")
-
     if not password:
         return jsonify({"error": "Password required"}), 400
 
     user_id = decoded["user_id"]
-
-    user = query_db(
-        "SELECT dashboard_password_hash FROM users WHERE id=?",
-        (user_id,),
-        fetchone=True
-    )
+    user = query_db("SELECT dashboard_password_hash FROM users WHERE id=%s", (user_id,), fetchone=True)
 
     if not user or not user[0]:
         return jsonify({"error": "Dashboard password not set"}), 400
@@ -310,7 +282,6 @@ def unlock_dashboard(decoded):
 
     return jsonify({"success": True}), 200
 
-# dashboard password change
 @app.route("/api/change-dashboard-password", methods=["POST", "OPTIONS"])
 @token_required
 def change_dashboard_password(decoded):
@@ -319,21 +290,16 @@ def change_dashboard_password(decoded):
 
     data = request.get_json()
     new_password = data.get("new_password")
-
     if not new_password:
         return jsonify({"error": "New password required"}), 400
 
     user_id = decoded["user_id"]
     new_hash = generate_password_hash(new_password)
-
-    query_db(
-        "UPDATE users SET dashboard_password_hash=? WHERE id=?",
-        (new_hash, user_id)
-    )
+    query_db("UPDATE users SET dashboard_password_hash=%s WHERE id=%s", (new_hash, user_id))
 
     return jsonify({"message": "Dashboard password updated"}), 200
 
-#  PENDING ORDERS
+# ----------------- PENDING ORDERS -----------------
 @app.route("/api/pending-orders", methods=["GET", "POST", "OPTIONS"])
 def pending_orders_route():
     if request.method == "OPTIONS":
@@ -353,19 +319,13 @@ def pending_orders_route():
                 "status": r[6] or "pending"
             })
         return jsonify(orders)
+
     data = request.json
     order_id = data.get("id") or str(uuid.uuid4())
     query_db(
-        "INSERT INTO pending_orders (id, customer_name, notes, date, items, total, status) VALUES (?, ?, ?, ?, ?, ?, ?)",
-        (
-            order_id,
-            data["customerName"],
-            data.get("notes", ""),
-            data["date"],
-            json.dumps(data.get("items", [])),
-            data.get("total", 0),
-            data.get("status", "pending")
-        )
+        "INSERT INTO pending_orders (id, customer_name, notes, date, items, total, status) VALUES (%s,%s,%s,%s,%s,%s,%s)",
+        (order_id, data["customerName"], data.get("notes", ""), data["date"],
+         json.dumps(data.get("items", [])), data.get("total", 0), data.get("status", "pending"))
     )
     return jsonify({"id": order_id, **data}), 200
 
@@ -373,14 +333,15 @@ def pending_orders_route():
 def delete_pending(id):
     if request.method == "OPTIONS":
         return '', 200
-    query_db("DELETE FROM pending_orders WHERE id=?", (id,))
+    query_db("DELETE FROM pending_orders WHERE id=%s", (id,))
     return jsonify({"message": "Pending order deleted"}), 200
 
-#  HOME
+# ----------------- HOME -----------------
 @app.route("/")
 def home():
     return jsonify({"message": "Flask POS Backend is running"}), 200
 
+# ----------------- RUN -----------------
 if __name__ == "__main__":
-    init_db()  
+    init_db()
     app.run(host="0.0.0.0", port=5000)

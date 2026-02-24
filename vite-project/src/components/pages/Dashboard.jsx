@@ -18,14 +18,14 @@ const Dashboard = ({ onNavigate }) => {
     pendingOrders, 
     products, 
     clearSales, 
-    user, 
-    token, 
+    user,  
     unlockDashboard 
   } = usePOS();
 
   const [authenticated, setAuthenticated] = useState(false);
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const token = localStorage.getItem("token"); 
 
   // Redirect to login if no token
   useEffect(() => {
