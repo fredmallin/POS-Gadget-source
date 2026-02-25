@@ -141,41 +141,44 @@ def token_required(f):
 def login():
     if request.method == "OPTIONS":
         return '', 200
+    try:
+        data = request.get_json()
+        username = data.get("username")
+        password = data.get("password")
 
-    data = request.get_json()
-    username = data.get("username")
-    password = data.get("password")
+        if not username or not password:
+            return jsonify({"error": "Username and password required"}), 400
 
-    if not username or not password:
-        return jsonify({"error": "Username and password required"}), 400
+        user = query_db(
+            "SELECT id, password_hash FROM users WHERE username=%s",
+            (username,),
+            fetchone=True
+        )
 
-    user = query_db(
-        "SELECT id, password_hash FROM users WHERE username=%s",
-        (username,),
-        fetchone=True
-    )
+        if not user:
+            return jsonify({"error": "Invalid credentials"}), 401
 
-    if not user:
-        return jsonify({"error": "Invalid credentials"}), 401
+        user_id, password_hash = user
 
-    user_id, password_hash = user
+        if not check_password_hash(password_hash, password):
+            return jsonify({"error": "Invalid credentials"}), 401
 
-    if not check_password_hash(password_hash, password):
-        return jsonify({"error": "Invalid credentials"}), 401
+        token = jwt.encode(
+            {
+                "user_id": user_id,
+                "exp": datetime.datetime.utcnow() + datetime.timedelta(hours=8)
+            },
+            app.config["SECRET_KEY"],
+            algorithm="HS256"
+        )
 
-    token = jwt.encode(
-        {
-            "user_id": user_id,
-            "exp": datetime.datetime.utcnow() + datetime.timedelta(hours=8)
-        },
-        app.config["SECRET_KEY"],
-        algorithm="HS256"
-    )
+        return jsonify({
+            "token": token,
+            "user": {"id": user_id, "username": username}
+        }), 200
 
-    return jsonify({
-        "token": token,
-        "user": {"id": user_id, "username": username}
-    }), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 @app.route("/api/change-password", methods=["POST", "OPTIONS"])
 @token_required
