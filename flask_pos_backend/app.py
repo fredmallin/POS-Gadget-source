@@ -370,6 +370,14 @@ def home():
     response.headers.add("Access-Control-Allow-Origin", "*")
     return response, 200
 
+    @app.route("/api/check-admin")
+def check_admin():
+    user = query_db(
+        "SELECT username, password_hash, dashboard_password_hash FROM users WHERE username='admin'",
+        fetchone=True
+    )
+    return jsonify({"admin": user})
+
 @app.route("/api/setup", methods=["GET"])
 def setup():
     username = "admin"
