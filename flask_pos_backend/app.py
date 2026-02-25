@@ -33,7 +33,6 @@ def init_db():
     conn = psycopg2.connect(DATABASE_URL)
     cur = conn.cursor()
 
-    # USERS
     cur.execute('''
         CREATE TABLE IF NOT EXISTS users (
             id SERIAL PRIMARY KEY,
@@ -43,7 +42,6 @@ def init_db():
         )
     ''')
 
-    # PRODUCTS
     cur.execute('''
         CREATE TABLE IF NOT EXISTS products (
             id TEXT PRIMARY KEY,
@@ -56,12 +54,10 @@ def init_db():
         )
     ''')
 
-    # Add missing columns to existing products table (safe to run every time)
     cur.execute("ALTER TABLE products ADD COLUMN IF NOT EXISTS category TEXT")
     cur.execute("ALTER TABLE products ADD COLUMN IF NOT EXISTS sku TEXT")
     cur.execute("ALTER TABLE products ADD COLUMN IF NOT EXISTS image_url TEXT")
 
-    # SALES
     cur.execute('''
         CREATE TABLE IF NOT EXISTS sales (
             id TEXT PRIMARY KEY,
@@ -75,7 +71,6 @@ def init_db():
         )
     ''')
 
-    # PENDING ORDERS
     cur.execute('''
         CREATE TABLE IF NOT EXISTS pending_orders (
             id TEXT PRIMARY KEY,
@@ -88,7 +83,6 @@ def init_db():
         )
     ''')
 
-    # INDEXES
     cur.execute("CREATE INDEX IF NOT EXISTS idx_users_username ON users(username)")
     cur.execute("CREATE INDEX IF NOT EXISTS idx_sales_user_id ON sales(user_id)")
     cur.execute("CREATE INDEX IF NOT EXISTS idx_products_id ON products(id)")
@@ -125,7 +119,6 @@ def token_required(f):
     def decorated(*args, **kwargs):
         if request.method == "OPTIONS":
             return '', 200
-
         token = request.headers.get("Authorization", "").replace("Bearer ", "")
         if not token:
             return jsonify({"error": "Token missing"}), 401
@@ -194,7 +187,6 @@ def change_password(decoded):
         return jsonify({"error": "Both old and new passwords required"}), 400
 
     user_id = decoded["user_id"]
-
     user = query_db("SELECT password_hash FROM users WHERE id=%s", (user_id,), fetchone=True)
 
     if not user:
@@ -203,7 +195,7 @@ def change_password(decoded):
     if not check_password_hash(user[0], old_password):
         return jsonify({"error": "Old password incorrect"}), 401
 
-    new_hash = generate_password_hash(new_password)
+    new_hash = generate_password_hash(new_password, method="pbkdf2:sha256")
     query_db("UPDATE users SET password_hash=%s WHERE id=%s", (new_hash, user_id))
 
     return jsonify({"message": "Password changed successfully"}), 200
@@ -284,7 +276,6 @@ def sales_route():
          json.dumps(data.get("items", [])), data.get("total", 0), data.get("status", "completed"))
     )
 
-    # Deduct stock for each sold item (productId from frontend cart)
     for item in data.get("items", []):
         product_id = item.get("productId") or item.get("id")
         if product_id:
@@ -330,7 +321,7 @@ def change_dashboard_password(decoded):
         return jsonify({"error": "New password required"}), 400
 
     user_id = decoded["user_id"]
-    new_hash = generate_password_hash(new_password)
+    new_hash = generate_password_hash(new_password, method="pbkdf2:sha256")
     query_db("UPDATE users SET dashboard_password_hash=%s WHERE id=%s", (new_hash, user_id))
 
     return jsonify({"message": "Dashboard password updated"}), 200
@@ -383,12 +374,12 @@ def home():
 def setup():
     username = "admin"
     password = "admin123"
-    
+
     existing = query_db("SELECT id FROM users WHERE username=%s", (username,), fetchone=True)
     if existing:
-        return jsonify({"message": "User already exists"}), 200
-    
-    hashed = generate_password_hash(password)
+        query_db("DELETE FROM users WHERE username=%s", (username,))
+
+    hashed = generate_password_hash(password, method="pbkdf2:sha256")
     query_db("INSERT INTO users (username, password_hash) VALUES (%s, %s)", (username, hashed))
     return jsonify({"message": "User created", "username": username, "password": password}), 200
 
@@ -396,4 +387,3 @@ init_db()
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000)
-    
