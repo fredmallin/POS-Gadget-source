@@ -296,6 +296,20 @@ setProducts(updatedProducts);
     }
   };
 
+  /* ---------------- CHANGE DASHBOARD PASSWORD ---------------- */
+const changeDashboardPassword = async (newPassword) => {
+  try {
+    const res = await authFetch(`${API_URL}/change-dashboard-password`, {
+      method: "POST",
+      body: JSON.stringify({ new_password: newPassword }),
+    });
+
+    return { success: true, message: res.message || "Dashboard password updated" };
+  } catch (err) {
+    return { success: false, error: err.error || "Dashboard password change failed" };
+  }
+};
+
   /* ---------------- PROVIDER ---------------- */
   return (
     <POSContext.Provider

@@ -59,7 +59,7 @@ const ChangePassword = () => {
 
       if (mode === "login") {
         const oldPasswordToSend = formData.oldPassword || "";
-        result = await changeLoginPassword(oldPasswordToSend, formData.newPassword);
+      result = await changeDashboardPassword(formData.newPassword);
       } else if (mode === "dashboard") {
         if (!token) {
           setError("Dashboard session expired");

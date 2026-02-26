@@ -46,8 +46,14 @@ const SellProducts = () => {
       return;
     }
 
-    addToCart(product, 1);
-  };
+    addToCart({
+    productId: product.id,
+    productName: product.name,
+    price: Number(product.price), 
+    imageUrl: product.imageUrl,   
+    quantity: 1
+  });
+}
 
   const cartTotal = cart.reduce(
     (sum, item) => sum + item.price * item.quantity,
