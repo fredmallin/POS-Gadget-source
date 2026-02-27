@@ -18,11 +18,19 @@ export const ViewProducts = () => {
     imageUrl: '',
   });
 
-  const filteredProducts = products.filter(p =>
-    p.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    p.category?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    p.sku?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+ const filteredProducts = (products || []).filter(p => {
+    if (!p) return false;
+    if (!searchTerm) return true;
+    const name = p.name || '';
+    const category = p.category || '';
+    const sku = p.sku || '';
+    const term = searchTerm.toLowerCase();
+    return (
+      name.toLowerCase().includes(term) ||
+      category.toLowerCase().includes(term) ||
+      sku.toLowerCase().includes(term)
+    );
+  });
 
   const handleEditClick = (product) => {
     setEditingProduct(product);
