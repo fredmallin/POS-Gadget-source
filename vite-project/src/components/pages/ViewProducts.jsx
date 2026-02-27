@@ -64,22 +64,23 @@ export const ViewProducts = () => {
     reader.readAsDataURL(file);
   };
 
-  const handleEditSubmit = (e) => {
+  const handleEditSubmit = async (e) => {
     e.preventDefault();
 
-    updateProduct(editingProduct.id, {
+    const updated = {
       name: editForm.name,
       price: parseFloat(editForm.price),
       stock: parseInt(editForm.stock, 10),
       category: editForm.category,
       sku: editForm.sku || undefined,
       imageUrl: editForm.imageUrl || undefined,
-    });
+    };
 
-    toast.success('Product updated successfully!');
     setEditingProduct(null);
+    await updateProduct(editingProduct.id, updated);
+    toast.success('Product updated successfully!');
   };
-
+  
   const handleDelete = (id, name) => {
     deleteProduct(id);
     toast.success(`Deleted ${name}`);
