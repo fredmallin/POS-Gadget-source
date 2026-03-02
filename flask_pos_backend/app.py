@@ -245,11 +245,14 @@ def update_delete_product(id):
         )
         return jsonify({"message": "Product updated"}), 200
 
-# ----------------- SALES -----------------
-@app.route("/api/sales", methods=["GET", "POST", "OPTIONS"])
+@app.route("/api/sales", methods=["GET", "POST", "DELETE", "OPTIONS"])
 def sales_route():
     if request.method == "OPTIONS":
         return '', 200
+
+    if request.method == "DELETE":
+        query_db("DELETE FROM sales")
+        return jsonify({"message": "All sales cleared"}), 200
 
     if request.method == "GET":
         rows = query_db("SELECT * FROM sales")
@@ -362,6 +365,10 @@ def delete_pending(id):
         return '', 200
     query_db("DELETE FROM pending_orders WHERE id=%s", (id,))
     return jsonify({"message": "Pending order deleted"}), 200
+
+@app.route("/api/sales", methods=["GET", "POST", "DELETE", "OPTIONS"])
+def sales_route_delete():
+    pass
 
 @app.route("/")
 def home():

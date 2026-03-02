@@ -97,7 +97,7 @@ export const ViewProducts = () => {
         <div className="card-header">
           <div className="header-left">
             <Package className="icon-medium" />
-            <h2>All Products ({products.length})</h2>
+            <h2>All Products ({(products || []).length})</h2>
           </div>
 
           <div className="header-right">

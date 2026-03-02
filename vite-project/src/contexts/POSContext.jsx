@@ -254,39 +254,58 @@ setProducts(updatedProducts);
   };
 
   const completePendingOrder = async (orderId, paymentMethod = "Cash") => {
-    if (!user?.id) return;
+  if (!user?.id) return;
 
-    const order = pendingOrders.find(o => o.id === orderId);
-    if (!order) return;
+  const order = pendingOrders.find(o => o.id === orderId);
+  if (!order) return;
 
-    const completedSale = { id: generateId(), userId: user.id, userName: user.username, paymentMethod, date: new Date().toISOString(), items: order.items, total: order.total, status: "Paid" };
-
-    try {
-      const saved = await authFetch(`${API_URL}/sales`, { method: "POST", body: JSON.stringify(completedSale) });
-      setSales(prev => [...prev, saved]);
-
-      // ✅ Save updated stock to DB (not just local state)
-      for (const item of order.items) {
-        const product = products.find(p => p.id === item.productId);
-        if (!product) continue;
-        const newStock = Math.max(0, product.stock - item.quantity);
-        await authFetch(`${API_URL}/products/${product.id}`, {
-          method: "PATCH",
-          body: JSON.stringify({ stock: newStock }),
-        });
-      }
-
-      // ✅ Reload fresh from DB
-      const updatedProducts = await authFetch(`${API_URL}/products`);
-      setProducts(updatedProducts);
-
-      await authFetch(`${API_URL}/pending-orders/${orderId}`, { method: "DELETE" });
-      setPendingOrders(prev => prev.filter(o => o.id !== orderId));
-    } catch (err) {
-      console.error("Complete pending failed", err);
-    }
+  const completedSale = {
+    id: generateId(),
+    userId: user.id,
+    userName: user.username,
+    paymentMethod,
+    date: new Date().toISOString(),
+    items: order.items,
+    total: order.total,
+    status: "Paid"
   };
-  
+
+  try {
+    const saved = await authFetch(`${API_URL}/sales`, {
+      method: "POST",
+      body: JSON.stringify(completedSale)
+    });
+    setSales(prev => [...prev, saved]);
+
+    for (const item of order.items) {
+      const product = products.find(p => p.id === item.productId);
+      if (!product) continue;
+      const newStock = Math.max(0, product.stock - item.quantity);
+      await authFetch(`${API_URL}/products/${product.id}`, {
+        method: "PATCH",
+        body: JSON.stringify({ stock: newStock }),
+      });
+    }
+
+    const updatedProducts = await authFetch(`${API_URL}/products`);
+    setProducts(updatedProducts);
+
+    await authFetch(`${API_URL}/pending-orders/${orderId}`, { method: "DELETE" });
+    setPendingOrders(prev => prev.filter(o => o.id !== orderId));
+  } catch (err) {
+    console.error("Complete pending failed", err);
+  }
+};
+
+// ✅ Moved outside — now a proper standalone function
+const clearSales = async () => {
+  try {
+    await authFetch(`${API_URL}/sales`, { method: "DELETE" });
+    setSales([]);
+  } catch (err) {
+    console.error("Clear sales failed", err);
+  }
+};
   const cancelPendingOrder = async (orderId) => {
     try {
       await authFetch(`${API_URL}/pending-orders/${orderId}`, { method: "DELETE" });
@@ -325,6 +344,7 @@ const changeDashboardPassword = async (newPassword) => {
         removeFromCart,
         updateCartItemQuantity,
         clearCart,
+       clearSales, 
         checkout,
         savePending,
         completePendingOrder,
