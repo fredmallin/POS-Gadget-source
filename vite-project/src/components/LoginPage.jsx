@@ -1,4 +1,3 @@
-// src/pages/LoginPage.jsx
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "../index.css";
@@ -6,7 +5,7 @@ import { ShoppingCart, AlertCircle } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
 
 export const LoginPage = () => {
-  const [username, setUsername] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -20,22 +19,10 @@ export const LoginPage = () => {
     setLoading(true);
 
     try {
-      // Call login from AuthContext
-      const result = await login(username, password);
-
-      if (result.success) {
-        // Normal login
-        navigate("/dashboard");
-      } else if (result.firstLogin) {
-        // First-time login, redirect to change-password page
-        navigate("/change-password", { state: { username } });
-      } else {
-        // Login failed
-        setError(result.message || "Invalid username or password");
-      }
+      await login(email, password);
+      navigate("/dashboard");
     } catch (err) {
-      console.error("Login error:", err);
-      setError("Something went wrong. Please try again.");
+      setError("Invalid email or password");
     } finally {
       setLoading(false);
     }
@@ -56,13 +43,13 @@ export const LoginPage = () => {
 
         <form onSubmit={handleSubmit} className="login-form">
           <div className="form-group">
-            <label htmlFor="username">Username</label>
+            <label htmlFor="email">Email</label>
             <input
-              id="username"
-              type="text"
-              placeholder="Enter username"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
+              id="email"
+              type="email"
+              placeholder="Enter email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
               required
             />
           </div>

@@ -1,40 +1,43 @@
-// src/App.jsx
 import React, { useState } from "react";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
-import { POSProvider, usePOS } from "./contexts/POSContext";
+import { POSProvider } from "./contexts/POSContext";
+import { usePOS } from "./contexts/POSContext";
 
 import { LoginPage } from "./components/LoginPage";
 import { DashboardLayout } from "./components/DashboardLayout";
 import Dashboard from "./components/pages/Dashboard";
-
 import SellProducts from "./components/pages/SellProducts";
 import AllSales from "./components/pages/AllSales";
 import { PendingOrders } from "./components/pages/PendingOrders";
 import { AddProduct } from "./components/pages/AddProduct";
 import { ViewProducts } from "./components/pages/ViewProducts";
 import SearchProducts from "./components/pages/SearchProducts";
-
 import LowStock from "./components/pages/LowStock";
-
 import ChangePassword from "./components/pages/ChangePassword";
 import Preferences from "./components/pages/Preferences";
-
 import ForgotPassword from "./components/pages/ForgotPassword";
 import ResetPassword from "./components/pages/ResetPassword";
-
 import { Toaster } from "sonner";
 import "./App.css";
 
 // ================= APP CONTENT =================
 const AppContent = () => {
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
   const { sales } = usePOS();
   const [activeItem, setActiveItem] = useState("dashboard");
+
+  // Wait for Firebase to check auth state
+  if (loading) return <div style={{ 
+    display: "flex", 
+    justifyContent: "center", 
+    alignItems: "center", 
+    height: "100vh",
+    fontSize: "1.2rem"
+  }}>Loading...</div>;
 
   // Show login if not logged in
   if (!user) return <LoginPage />;
 
-  // Render selected page
   const renderContent = () => {
     switch (activeItem) {
       case "dashboard":
@@ -57,7 +60,6 @@ const AppContent = () => {
         return <ChangePassword />;
       case "preferences":
         return <Preferences />;
-      
       default:
         return <Dashboard key={sales.length} onNavigate={setActiveItem} />;
     }
@@ -74,8 +76,8 @@ const AppContent = () => {
 const App = () => (
   <AuthProvider>
     <POSProvider>
-      <AppContent />
       <Toaster />
+      <AppContent />
     </POSProvider>
   </AuthProvider>
 );

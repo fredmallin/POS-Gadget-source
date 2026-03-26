@@ -1,158 +1,102 @@
-// src/contexts/AuthContext.jsx
 import React, { createContext, useContext, useState, useEffect } from "react";
+import { auth } from "../firebase";
+import {
+  signInWithEmailAndPassword,
+  signOut,
+  updatePassword,
+  sendPasswordResetEmail,
+  onAuthStateChanged,
+  reauthenticateWithCredential,
+  EmailAuthProvider,
+} from "firebase/auth";
 
 const AuthContext = createContext();
 
-const BACKEND_URL = "https://pos-gadget-source-8.onrender.com"; // adjust if your backend is elsewhere
-
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true); 
+  const [loading, setLoading] = useState(true);
 
-  // ----------------- Load user from localStorage on mount -----------------
+  // Let Firebase manage auth state
   useEffect(() => {
-    const token = localStorage.getItem("token");
-    const userData = localStorage.getItem("user");
-
-    if (token && userData) {
-      setUser(JSON.parse(userData));
-    }
-
-    setLoading(false); // ✅ finished checking
-  }, []);
-// Add this inside AuthProvider, after the BACKEND_URL line
-useEffect(() => {
-  fetch(`${BACKEND_URL}/`).catch(() => {}); // silent wake-up ping
-}, []);
-
-  // ----------------- LOGIN -----------------
-  const login = async (username, password) => {
-    setLoading(true);
-    try {
-      const res = await fetch(`${BACKEND_URL}/api/login`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username, password }),
-      });
-
-      const data = await res.json();
-
-      if (res.ok) {
-        const userObj = {
-          id: data.user.id,
-          username: data.user.username,
-          role: data.user.role || "user",
-          isAdmin: data.user.isAdmin || false,
-        };
-
-        setUser(userObj);
-        localStorage.setItem("token", data.token);
-        localStorage.setItem("user", JSON.stringify(userObj));
-
-        return { success: true, firstLogin: data.firstLogin || false };
-      } else if (res.status === 403 && data.firstLogin) {
-        return { success: false, firstLogin: true, message: data.error };
+    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+      if (firebaseUser) {
+        setUser({ uid: firebaseUser.uid, email: firebaseUser.email });
       } else {
-        return { success: false, message: data.error || "Login failed" };
+        setUser(null);
       }
-    } catch (err) {
-      console.error("Login error:", err);
-      return { success: false, message: "Cannot connect to server" };
-    } finally {
       setLoading(false);
+    });
+    return () => unsubscribe();
+  }, []);
+
+  const login = async (email, password) => {
+    try {
+      await signInWithEmailAndPassword(auth, email, password);
+      return { success: true };
+    } catch (err) {
+      let message = "Invalid email or password.";
+      if (err.code === "auth/user-not-found") message = "No account found.";
+      if (err.code === "auth/wrong-password") message = "Wrong password.";
+      if (err.code === "auth/invalid-email") message = "Invalid email.";
+      if (err.code === "auth/invalid-credential") message = "Invalid email or password.";
+      return { success: false, message };
     }
   };
 
-  // ----------------- LOGOUT -----------------
-  const logout = () => {
+  const logout = async () => {
+    await signOut(auth);
     setUser(null);
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
   };
 
-  // ----------------- CHANGE PASSWORD -----------------
   const changePassword = async (currentPassword, newPassword) => {
-    const token = localStorage.getItem("token");
-    if (!token) return { success: false, message: "Not authenticated" };
-
+    if (!auth.currentUser) return { success: false, message: "Not logged in." };
     try {
-      const res = await fetch(`${BACKEND_URL}/api/change-password`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ current_password: currentPassword, new_password: newPassword }),
-      });
-
-      const data = await res.json();
-      return res.ok
-        ? { success: true, message: data.message }
-        : { success: false, message: data.error || "Failed to change password" };
+      // Reauthenticate first
+      const credential = EmailAuthProvider.credential(
+        auth.currentUser.email,
+        currentPassword
+      );
+      await reauthenticateWithCredential(auth.currentUser, credential);
+      // Now update password
+      await updatePassword(auth.currentUser, newPassword);
+      // Sign out so user logs in with new password
+      await signOut(auth);
+      setUser(null);
+      return { success: true, message: "Password updated! Please login again." };
     } catch (err) {
       console.error("Change password error:", err);
-      return { success: false, message: "Something went wrong" };
+      if (err.code === "auth/wrong-password" || err.code === "auth/invalid-credential") {
+        return { success: false, message: "Current password is incorrect." };
+      }
+      if (err.code === "auth/requires-recent-login") {
+        return { success: false, message: "Please logout and login again first." };
+      }
+      return { success: false, message: err.message };
     }
   };
 
-  // ----------------- FORGOT PASSWORD -----------------
   const forgotPassword = async (email) => {
     try {
-      const res = await fetch(`${BACKEND_URL}/api/forgot-password`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email }),
-      });
-      const data = await res.json();
-      return res.ok
-        ? { success: true, message: data.message }
-        : { success: false, message: data.error || "Failed to send reset link" };
+      await sendPasswordResetEmail(auth, email);
+      return { success: true, message: "Password reset email sent." };
     } catch (err) {
-      console.error("Forgot password error:", err);
-      return { success: false, message: "Something went wrong" };
+      return { success: false, message: err.message };
     }
   };
-
-  // ----------------- RESET PASSWORD -----------------
-  const resetPassword = async (token, newPassword) => {
-    try {
-      const res = await fetch(`${BACKEND_URL}/api/reset-password`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ token, new_password: newPassword }),
-      });
-      const data = await res.json();
-      return res.ok
-        ? { success: true, message: data.message }
-        : { success: false, message: data.error || "Failed to reset password" };
-    } catch (err) {
-      console.error("Reset password error:", err);
-      return { success: false, message: "Something went wrong" };
-    }
-  };
-
-  // ----------------- HELPERS -----------------
-  const isAuthenticated = !!user;
-  const isAdmin = !!user?.isAdmin;
 
   return (
-    <AuthContext.Provider
-      value={{
-        user,
-        loading,           // ✅ expose loading
-        login,
-        logout,
-        changePassword,
-        forgotPassword,
-        resetPassword,
-        isAuthenticated,
-        isAdmin,
-      }}
-    >
+    <AuthContext.Provider value={{
+      user,
+      loading,
+      login,
+      logout,
+      changePassword,
+      forgotPassword,
+      isAuthenticated: !!user,
+    }}>
       {children}
     </AuthContext.Provider>
   );
 };
 
-// ----------------- CUSTOM HOOK -----------------
 export const useAuth = () => useContext(AuthContext);

@@ -1,12 +1,14 @@
-// src/firebase.js
+// Import the functions you need from the SDKs you need
 import { initializeApp } from "firebase/app";
-import { getDatabase, ref, enableLogging } from "firebase/database";
+import { getAnalytics } from "firebase/analytics";
+import { getAuth } from "firebase/auth"; 
+import { getFirestore } from "firebase/firestore";
 import { getStorage } from "firebase/storage";
+// TODO: Add SDKs for Firebase products that you want to use
+// https://firebase.google.com/docs/web/setup#available-libraries
 
-
-// -------------------
-// Your Firebase config
-// -------------------
+// Your web app's Firebase configuration
+// For Firebase JS SDK v7.20.0 and later, measurementId is optional
 const firebaseConfig = {
   apiKey: "AIzaSyDf8OYiHUOAnV_6tV9SWeODD-zU1HmG568",
   authDomain: "gadget-source-pos.firebaseapp.com",
@@ -15,34 +17,12 @@ const firebaseConfig = {
   storageBucket: "gadget-source-pos.firebasestorage.app",
   messagingSenderId: "1080185832781",
   appId: "1:1080185832781:web:6cfb07f6d46fe13e866304",
-   measurementId: "G-RH1X7MKWHW"
+  measurementId: "G-RH1X7MKWHW"
 };
 
-// Initialize Firebase app
+// Initialize Firebase
 const app = initializeApp(firebaseConfig);
-
-// Get a Realtime Database instance
-export const db = getDatabase(app);
-
-// Enable Firebase debug logging (optional)
-enableLogging(true);
-
-// Reference to products path
-export const productsRef = ref(db, "products");
-
-// Reference to sales path (NEW)
-export const salesRef = ref(db, "sales"); // <-- add this
-
-// -------------------
-// OFFLINE SUPPORT
-// -------------------
-// Realtime Database in browsers automatically caches data for offline reads
-// Use onValue listeners; Firebase handles offline caching automatically
-
-// -------------------
-// Optional: connect to local emulator (for dev)
-// -------------------
-// import { connectDatabaseEmulator } from "firebase/database";
-// connectDatabaseEmulator(db, "localhost", 9000);
-
-export const storage = getStorage(app, "gs://gadget-source-pos.appspot.com");
+const analytics = getAnalytics(app);
+export const auth = getAuth(app);
+export const db = getFirestore(app);
+export const storage = getStorage(app);

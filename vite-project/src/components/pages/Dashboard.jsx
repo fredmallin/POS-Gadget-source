@@ -12,15 +12,12 @@ import {
   Layers
 } from 'lucide-react';
 
+// Firestore imports
+import { doc, getDoc } from "firebase/firestore";
+import { db } from "../../firebase"; // Adjust path to your firebase.js
+
 const Dashboard = ({ onNavigate }) => {
-  const { 
-    sales, 
-    pendingOrders, 
-    products, 
-    clearSales, 
-    user,  
-    unlockDashboard 
-  } = usePOS();
+  const { sales, pendingOrders, products, clearSales, user } = usePOS();
 
   const [authenticated, setAuthenticated] = useState(false);
   const [password, setPassword] = useState("");
@@ -34,20 +31,32 @@ const Dashboard = ({ onNavigate }) => {
     }
   }, [token, onNavigate]);
 
-  // 🔐 Dashboard Unlock
+  // 🔐 Dashboard Unlock (Firestore version)
   const handleUnlock = async () => {
     if (!password) {
       setError("Please enter your dashboard password");
       return;
     }
 
-    const result = await unlockDashboard(password);
+    try {
+      const docRef = doc(db, "dashboardPassword", "main"); // your collection & doc
+      const docSnap = await getDoc(docRef);
 
-    if (result.success) {
-      setAuthenticated(true);
-      setError("");
-    } else {
-      setError(result.error || "Incorrect dashboard password");
+      if (docSnap.exists()) {
+        const firestorePassword = docSnap.data().password;
+
+        if (password === firestorePassword) {
+          setAuthenticated(true);
+          setError("");
+        } else {
+          setError("Incorrect dashboard password");
+        }
+      } else {
+        setError("Dashboard password not set in Firestore");
+      }
+    } catch (err) {
+      console.error(err);
+      setError("Error accessing dashboard password");
     }
   };
 
