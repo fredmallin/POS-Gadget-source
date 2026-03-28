@@ -109,20 +109,20 @@ const Dashboard = ({ onNavigate }) => {
   const stats = [
     {
       title: "Today's Revenue",
-      value: `Ksh${todayRevenue.toFixed(2)}`,
+      value: `Ksh{todayRevenue.toFixed(2)}`,
       icon: <DollarSign />,
       color: 'green',
-      sub: `${todaySales.length} sale(s)`,
+      sub: `ksh{todaySales.length} sale(s)`,
     },
     {
       title: 'Total Revenue',
-      value: `Ksh${totalRevenue.toFixed(2)}`,
+      value: `Ksh{totalRevenue.toFixed(2)}`,
       icon: <TrendingUp />,
       color: 'blue',
     },
     {
       title: 'Total Stock Value',
-      value: `Ksh${totalStockValue.toFixed(2)}`,
+      value: `Ksh{totalStockValue.toFixed(2)}`,
       icon: <Layers />,
       color: 'purple',
     },
