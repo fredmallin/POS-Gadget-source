@@ -1,30 +1,32 @@
 import React from 'react';
-import { usePOS } from "../../contexts/POSContext";
-import { useAuth } from "../../contexts/AuthContext";
+import { usePOS } from '../../contexts/POSContext';
 import { AlertTriangle, Package } from 'lucide-react';
 import { toast } from 'sonner';
 import '../../index.css';
 
 const LowStock = ({ onNavigate }) => {
-  const { products = [], lowStockThreshold = 5, updateProduct } = usePOS(); 
-  const { isAdmin } = useAuth();
+  const { products = [], lowStockThreshold, updateProduct } = usePOS();
 
-  const lowStockProducts = (products || []).filter(
-    (p) => (p.stock || 0) <= lowStockThreshold
+  const threshold = lowStockThreshold ?? 10;
+
+  const lowStockProducts = products.filter(
+    (p) => (p.stock || 0) <= threshold
   );
 
-  const handleQuickRestock = (productId, currentStock) => {
-    updateProduct(productId, { stock: currentStock + 10 });
-    toast.success('Stock updated (+10 units)');
+  const handleQuickRestock = async (productId, currentStock) => {
+    try {
+      await updateProduct(productId, { stock: currentStock + 10 });
+      toast.success('Stock updated (+10 units)');
+    } catch (err) {
+      toast.error('Failed to update stock');
+    }
   };
 
   return (
     <div className="lowstock-page">
       <div className="page-header">
         <h1>Low Stock Alert</h1>
-        <p>
-          Products with stock at or below {lowStockThreshold} units
-        </p>
+        <p>Products with stock at or below {threshold} units</p>
       </div>
 
       <div className="warning-card">
@@ -34,8 +36,8 @@ const LowStock = ({ onNavigate }) => {
         <div>
           <h3>Low Stock Warning</h3>
           <p>
-            {lowStockProducts.length} product(s) need restocking.
-            Take action to avoid running out of stock.
+            {lowStockProducts.length} product(s) need restocking. Take action
+            to avoid running out of stock.
           </p>
         </div>
       </div>
@@ -62,10 +64,9 @@ const LowStock = ({ onNavigate }) => {
                   <th>Stock</th>
                   <th>Price</th>
                   <th>Status</th>
-                  {isAdmin && <th>Actions</th>}
+                  <th>Actions</th>
                 </tr>
               </thead>
-
               <tbody>
                 {lowStockProducts.map((product) => (
                   <tr key={product.id}>
@@ -76,27 +77,22 @@ const LowStock = ({ onNavigate }) => {
                       </span>
                     </td>
                     <td className="stock">{product.stock || 0}</td>
-                    <td>${(product.price || 0).toFixed(2)}</td>
+                    <td>Ksh{(product.price || 0).toFixed(2)}</td>
                     <td>
                       <span className="badge warning">
                         <AlertTriangle size={12} /> Low Stock
                       </span>
                     </td>
-                    {isAdmin && (
-                      <td>
-                        <button
-                          className="btn-outline small"
-                          onClick={() =>
-                            handleQuickRestock(
-                              product.id,
-                              product.stock || 0
-                            )
-                          }
-                        >
-                          Quick Restock (+10)
-                        </button>
-                      </td>
-                    )}
+                    <td>
+                      <button
+                        className="btn-outline small"
+                        onClick={() =>
+                          handleQuickRestock(product.id, product.stock || 0)
+                        }
+                      >
+                        Quick Restock (+10)
+                      </button>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -105,7 +101,7 @@ const LowStock = ({ onNavigate }) => {
         </div>
       )}
 
-      {isAdmin && lowStockProducts.length > 0 && (
+      {lowStockProducts.length > 0 && (
         <div className="card cta-card">
           <div>
             <h3>Need to add more products?</h3>

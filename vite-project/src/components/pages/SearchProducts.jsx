@@ -4,10 +4,12 @@ import { usePOS } from '../../contexts/POSContext';
 import '../../index.css';
 
 const SearchProducts = () => {
-  const { products = [] } = usePOS(); 
+  const { products = [] } = usePOS();
   const [searchTerm, setSearchTerm] = useState('');
 
+  // Always filter — when search is empty this returns ALL products
   const filteredProducts = products.filter((p) => {
+    if (!searchTerm) return true;
     const name = p.name || '';
     const category = p.category || '';
     const sku = p.sku || '';
@@ -32,7 +34,7 @@ const SearchProducts = () => {
           <input
             type="text"
             placeholder="Type to search by name, SKU, or category..."
-            value={searchTerm} 
+            value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             autoFocus
           />
@@ -43,9 +45,10 @@ const SearchProducts = () => {
         <div className="card empty-state">
           <Package size={48} />
           <p>No products available</p>
+          <span>Start by adding products in the Add Product section</span>
         </div>
       ) : (
-        <div className="results-section">
+        <>
           {searchTerm && (
             <p className="results-count">
               Found {filteredProducts.length} result(s) for "{searchTerm}"
@@ -76,7 +79,7 @@ const SearchProducts = () => {
                     <div className="product-row">
                       <div>
                         <span className="price">
-                          ${Number(product.price || 0).toFixed(2)}
+                          Ksh{Number(product.price || 0).toFixed(2)}
                         </span>
                       </div>
                       <div className="stock">
@@ -86,60 +89,12 @@ const SearchProducts = () => {
                         </strong>
                       </div>
                     </div>
-
-                    <div className="product-value">
-                      <span>Total Value</span>
-                      <strong>
-                        ${(Number(product.price || 0) * Number(product.stock || 0)).toFixed(2)}
-                      </strong>
-                    </div>
                   </div>
                 </div>
               ))}
             </div>
           )}
-        </div>
-      )}
-
-      {!searchTerm && products.length > 0 && (
-        <div className="product-grid">
-          {products.map((product) => (
-            <div key={product.id} className="product-card">
-              <div className="product-content">
-                <h3>{product.name || 'Unnamed Product'}</h3>
-                <span className="badge">{product.category || 'Uncategorized'}</span>
-                {product.sku && (
-                  <div className="sku">
-                    <Barcode size={16} />
-                    <span>{product.sku}</span>
-                  </div>
-                )}
-                <div className="product-row">
-                  <div>
-                    <span className="price">${Number(product.price || 0).toFixed(2)}</span>
-                  </div>
-                  <div className="stock">
-                    <span>Stock</span>
-                    <strong className={Number(product.stock || 0) <= 10 ? 'low-stock' : ''}>
-                      {Number(product.stock || 0)}
-                    </strong>
-                  </div>
-                </div>
-                <div className="product-value">
-                  <span>Total Value</span>
-                  <strong>${(Number(product.price || 0) * Number(product.stock || 0)).toFixed(2)}</strong>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {products.length === 0 && !searchTerm && (
-        <div className="card empty-state">
-          <Search size={48} />
-          <p>Start adding products to see them here</p>
-        </div>
+        </>
       )}
     </div>
   );

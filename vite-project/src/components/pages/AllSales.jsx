@@ -1,13 +1,15 @@
-import React, { useState } from "react";
-import { usePOS } from "../../contexts/POSContext";
-import "../../index.css";
+import React, { useState } from 'react';
+import { usePOS } from '../../contexts/POSContext';
+import '../../index.css';
 
 export default function AllSales() {
   const { sales } = usePOS();
-  const [searchTerm, setSearchTerm] = useState("");
+  const [searchTerm, setSearchTerm] = useState('');
   const [selectedSale, setSelectedSale] = useState(null);
 
-  const paidSales = sales.filter((s) => String(s.status || "").toLowerCase() === "paid");
+  const paidSales = sales.filter(
+    (s) => String(s.status || '').toLowerCase() === 'paid'
+  );
 
   const filteredSales = paidSales
     .filter((sale) => {
@@ -15,48 +17,59 @@ export default function AllSales() {
       if (!term) return true;
 
       const date = sale.date ? new Date(sale.date) : null;
-      const dateStr = date ? date.toLocaleDateString().toLowerCase() : "";
-      const timeStr = date ? date.toLocaleTimeString().toLowerCase() : "";
-      const fullDateStr = date ? date.toLocaleString().toLowerCase() : "";
-      const name = String(sale.userName || "").toLowerCase();
-      const method = String(sale.paymentMethod || "").toLowerCase();
-      const total = String(sale.total || "");
-      const saleId = String(sale.id || "").toLowerCase();
+      const dateStr = date ? date.toLocaleDateString().toLowerCase() : '';
+      const timeStr = date ? date.toLocaleTimeString().toLowerCase() : '';
+      const fullDateStr = date ? date.toLocaleString().toLowerCase() : '';
+
+      // userEmail is what POSContext saves — check both for backwards compat
+      const cashier = String(
+        sale.userEmail || sale.userName || ''
+      ).toLowerCase();
+
+      const method = String(sale.paymentMethod || '').toLowerCase();
+      const total = String(sale.total || '');
+      const customer = String(sale.customerName || '').toLowerCase();
+
       const itemsMatch =
         Array.isArray(sale.items) &&
         sale.items.some((item) =>
-          String(item.productName || "").toLowerCase().includes(term)
+          String(item.productName || '').toLowerCase().includes(term)
         );
 
       return (
         dateStr.includes(term) ||
         timeStr.includes(term) ||
         fullDateStr.includes(term) ||
-        name.includes(term) ||
+        cashier.includes(term) ||
         method.includes(term) ||
         total.includes(term) ||
-        saleId.includes(term) ||
+        customer.includes(term) ||
         itemsMatch
       );
     })
     .sort((a, b) => new Date(b.date) - new Date(a.date));
 
-  const totalRevenue = paidSales.reduce((sum, sale) => sum + (sale.total || 0), 0);
+  const totalRevenue = paidSales.reduce(
+    (sum, sale) => sum + (sale.total || 0),
+    0
+  );
 
-  const openModal = (sale) => setSelectedSale(sale);
-  const closeModal = () => setSelectedSale(null);
+  const formatItems = (items = []) =>
+    items
+      .map((item) => `${item.productName || 'Item'} (×${item.quantity || 0})`)
+      .join(', ');
 
-  const formatItems = (items = []) => {
-    return items
-      .map((item) => `${item.productName || "Item"} (${item.quantity || 0})`)
-      .join(", ");
-  };
+  // Display: prefer email, fall back to userName for old records
+  const displayCashier = (sale) =>
+    sale.userEmail || sale.userName || 'Unknown';
 
   return (
     <div className="allsales-container">
-      <h1>All Sales</h1>
+      <h1>All Sold Goods</h1>
       <p>View and search all completed sales</p>
-      <p><strong>Total Revenue: Ksh{totalRevenue.toFixed(2)}</strong></p>
+      <p>
+        <strong>Total Revenue: Ksh{totalRevenue.toFixed(2)}</strong>
+      </p>
 
       <input
         type="text"
@@ -71,8 +84,9 @@ export default function AllSales() {
           <tr>
             <th>Date & Time</th>
             <th>Cashier</th>
+            <th>Customer</th>
             <th>Items</th>
-            <th>Payment Method</th>
+            <th>Payment</th>
             <th>Total</th>
             <th>Actions</th>
           </tr>
@@ -80,20 +94,25 @@ export default function AllSales() {
         <tbody>
           {filteredSales.length === 0 ? (
             <tr>
-              <td colSpan="6" className="no-sales">
+              <td colSpan="7" className="no-sales">
                 No sales found
               </td>
             </tr>
           ) : (
             filteredSales.map((sale) => (
               <tr key={sale.id}>
-                <td>{sale.date ? new Date(sale.date).toLocaleString() : "N/A"}</td>
-                <td>{sale.userName || "Unknown"}</td>
+                <td>
+                  {sale.date
+                    ? new Date(sale.date).toLocaleString()
+                    : 'N/A'}
+                </td>
+                <td>{displayCashier(sale)}</td>
+                <td>{sale.customerName || '—'}</td>
                 <td>{formatItems(sale.items)}</td>
-                <td>{sale.paymentMethod || "N/A"}</td>
+                <td>{sale.paymentMethod || 'N/A'}</td>
                 <td>Ksh{(sale.total || 0).toFixed(2)}</td>
                 <td>
-                  <button onClick={() => openModal(sale)}>View</button>
+                  <button onClick={() => setSelectedSale(sale)}>View</button>
                 </td>
               </tr>
             ))
@@ -101,25 +120,65 @@ export default function AllSales() {
         </tbody>
       </table>
 
+      {/* Detail Modal */}
       {selectedSale && (
-        <div className="modal-overlay" onClick={closeModal}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-            <button className="modal-close" onClick={closeModal}>&times;</button>
+        <div className="modal-overlay" onClick={() => setSelectedSale(null)}>
+          <div
+            className="modal-content"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              className="modal-close"
+              onClick={() => setSelectedSale(null)}
+            >
+              &times;
+            </button>
 
             <h2>Sale Details</h2>
-            <p><strong>Sale ID:</strong> {selectedSale.id || "N/A"}</p>
-            <p><strong>Date & Time:</strong> {selectedSale.date ? new Date(selectedSale.date).toLocaleString() : "N/A"}</p>
-            <p><strong>Cashier:</strong> {selectedSale.userName || "Unknown"}</p>
-            <p><strong>Payment Method:</strong> {selectedSale.paymentMethod || "N/A"}</p>
+            <p>
+              <strong>Sale ID:</strong> {selectedSale.id}
+            </p>
+            <p>
+              <strong>Date & Time:</strong>{' '}
+              {selectedSale.date
+                ? new Date(selectedSale.date).toLocaleString()
+                : 'N/A'}
+            </p>
+            <p>
+              <strong>Cashier:</strong> {displayCashier(selectedSale)}
+            </p>
+            {selectedSale.customerName && (
+              <p>
+                <strong>Customer:</strong> {selectedSale.customerName}
+              </p>
+            )}
+            <p>
+              <strong>Payment Method:</strong>{' '}
+              {selectedSale.paymentMethod || 'N/A'}
+            </p>
+            {selectedSale.fromPending && (
+              <p>
+                <em>This sale was completed from a pending order.</em>
+              </p>
+            )}
 
             <h3>Items</h3>
             <div className="modal-items">
-              {Array.isArray(selectedSale.items) && selectedSale.items.length > 0 ? (
+              {Array.isArray(selectedSale.items) &&
+              selectedSale.items.length > 0 ? (
                 selectedSale.items.map((item, idx) => (
                   <div key={idx} className="modal-item">
-                    <span>{item.productName || "Item"}</span>
-                    <span>Ksh{Number(item.price || 0).toFixed(2)} × {item.quantity || 0}</span>
-                    <span>Ksh{((item.price || 0) * (item.quantity || 0)).toFixed(2)}</span>
+                    <span>{item.productName || 'Item'}</span>
+                    <span>
+                      Ksh{Number(item.price || 0).toFixed(2)} ×{' '}
+                      {item.quantity || 0}
+                    </span>
+                    <span>
+                      Ksh
+                      {(
+                        (item.price || 0) * (item.quantity || 0)
+                      ).toFixed(2)}
+                    </span>
                   </div>
                 ))
               ) : (
@@ -128,7 +187,9 @@ export default function AllSales() {
             </div>
 
             <div className="modal-total">
-              <strong>Total: Ksh{Number(selectedSale.total || 0).toFixed(2)}</strong>
+              <strong>
+                Total: Ksh{Number(selectedSale.total || 0).toFixed(2)}
+              </strong>
             </div>
           </div>
         </div>

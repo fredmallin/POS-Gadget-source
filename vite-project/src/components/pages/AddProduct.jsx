@@ -14,36 +14,32 @@ export const AddProduct = () => {
     stock: '',
     category: '',
     sku: '',
-    imageUrl: '',
   });
+
+  // Store the actual File object, not base64
+  const [imageFile, setImageFile] = useState(null);
+  const [imagePreview, setImagePreview] = useState('');
+  const [submitting, setSubmitting] = useState(false);
 
   const handleChange = (field, value) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
-  // Handle file upload 
-  const handleImageUpload = (e) => {
+  const handleImageSelect = (e) => {
     const file = e.target.files[0];
     if (!file) return;
 
-    // Validate image type
-    if (!file.type.startsWith("image/")) {
-      toast.error("Please upload a valid image file");
+    if (!file.type.startsWith('image/')) {
+      toast.error('Please upload a valid image file');
       return;
     }
 
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      setFormData(prev => ({
-        ...prev,
-        imageUrl: reader.result
-      }));
-    };
-
-    reader.readAsDataURL(file);
+    // Only use for local preview — actual upload goes to Firebase Storage
+    setImageFile(file);
+    setImagePreview(URL.createObjectURL(file));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
     if (!formData.name || !formData.price || !formData.stock || !formData.category) {
@@ -51,30 +47,38 @@ export const AddProduct = () => {
       return;
     }
 
-    addProduct({
-      name: formData.name,
-      price: parseFloat(formData.price),
-      stock: parseInt(formData.stock, 10),
-      category: formData.category,
-      sku: formData.sku || undefined,
-      imageUrl: formData.imageUrl || undefined,
-    });
+    setSubmitting(true);
+    try {
+      // Pass the File object — POSContext uploads it to Firebase Storage
+      await addProduct(
+        {
+          name: formData.name,
+          price: parseFloat(formData.price),
+          stock: parseInt(formData.stock, 10),
+          category: formData.category,
+          sku: formData.sku || '',
+        },
+        imageFile  // File object or null
+      );
 
-    toast.success('Product added successfully!');
+      toast.success('Product added successfully!');
 
-    setFormData({
-      name: '',
-      price: '',
-      stock: '',
-      category: '',
-      sku: '',
-      imageUrl: '',
-    });
-
-    // Reset file input
-    if (fileInputRef.current) {
-      fileInputRef.current.value = "";
+      setFormData({ name: '', price: '', stock: '', category: '', sku: '' });
+      setImageFile(null);
+      setImagePreview('');
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    } catch (err) {
+      toast.error('Failed to add product. Please try again.');
+    } finally {
+      setSubmitting(false);
     }
+  };
+
+  const handleClear = () => {
+    setFormData({ name: '', price: '', stock: '', category: '', sku: '' });
+    setImageFile(null);
+    setImagePreview('');
+    if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
   return (
@@ -111,7 +115,7 @@ export const AddProduct = () => {
             </div>
 
             <div className="form-group">
-              <label>Price ($) *</label>
+              <label>Price (Ksh) *</label>
               <input
                 type="number"
                 min="0"
@@ -145,30 +149,27 @@ export const AddProduct = () => {
 
             <div className="form-group">
               <label>Product Image (optional)</label>
-
               <input
                 type="file"
                 accept="image/*"
                 capture="environment"
-                onChange={handleImageUpload}
+                onChange={handleImageSelect}
                 ref={fileInputRef}
               />
-
-              <small style={{ color: "#666" }}>
-                Choose from gallery or take a photo
+              <small style={{ color: '#666' }}>
+                Image is uploaded to cloud storage — not stored in the database
               </small>
-
-              {formData.imageUrl && (
-                <div style={{ marginTop: "10px" }}>
+              {imagePreview && (
+                <div style={{ marginTop: '10px' }}>
                   <img
-                    src={formData.imageUrl}
+                    src={imagePreview}
                     alt="Preview"
                     style={{
-                      width: "120px",
-                      height: "120px",
-                      objectFit: "cover",
-                      borderRadius: "8px",
-                      border: "1px solid #ddd"
+                      width: '120px',
+                      height: '120px',
+                      objectFit: 'cover',
+                      borderRadius: '8px',
+                      border: '1px solid #ddd',
                     }}
                   />
                 </div>
@@ -178,27 +179,16 @@ export const AddProduct = () => {
           </div>
 
           <div className="form-actions">
-            <button type="submit" className="btn-primary">
-              <PackagePlus size={16} /> Add Product
+            <button type="submit" className="btn-primary" disabled={submitting}>
+              <PackagePlus size={16} />
+              {submitting ? 'Adding...' : 'Add Product'}
             </button>
 
             <button
               type="button"
               className="btn-outline"
-              onClick={() => {
-                setFormData({
-                  name: '',
-                  price: '',
-                  stock: '',
-                  category: '',
-                  sku: '',
-                  imageUrl: '',
-                });
-
-                if (fileInputRef.current) {
-                  fileInputRef.current.value = "";
-                }
-              }}
+              onClick={handleClear}
+              disabled={submitting}
             >
               Clear Form
             </button>

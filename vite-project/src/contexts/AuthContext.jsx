@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
-import { auth } from "../firebase";
+import { auth, db } from "../firebase";
 import {
   signInWithEmailAndPassword,
   signOut,
@@ -9,6 +9,7 @@ import {
   reauthenticateWithCredential,
   EmailAuthProvider,
 } from "firebase/auth";
+import { doc, getDoc, updateDoc } from "firebase/firestore";
 
 const AuthContext = createContext();
 
@@ -16,7 +17,6 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // Let Firebase manage auth state
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
       if (firebaseUser) {
@@ -48,23 +48,21 @@ export const AuthProvider = ({ children }) => {
     setUser(null);
   };
 
-  const changePassword = async (currentPassword, newPassword) => {
+  // ── Firebase Auth password (login page password) ──────────────────────────
+  const changeLoginPassword = async (currentPassword, newPassword) => {
     if (!auth.currentUser) return { success: false, message: "Not logged in." };
     try {
-      // Reauthenticate first
       const credential = EmailAuthProvider.credential(
         auth.currentUser.email,
         currentPassword
       );
       await reauthenticateWithCredential(auth.currentUser, credential);
-      // Now update password
       await updatePassword(auth.currentUser, newPassword);
-      // Sign out so user logs in with new password
       await signOut(auth);
       setUser(null);
-      return { success: true, message: "Password updated! Please login again." };
+      return { success: true, message: "Login password updated! Please sign in again." };
     } catch (err) {
-      console.error("Change password error:", err);
+      console.error("Change login password error:", err);
       if (err.code === "auth/wrong-password" || err.code === "auth/invalid-credential") {
         return { success: false, message: "Current password is incorrect." };
       }
@@ -74,6 +72,33 @@ export const AuthProvider = ({ children }) => {
       return { success: false, message: err.message };
     }
   };
+
+  // ── Firestore dashboard password ──────────────────────────────────────────
+  const changeDashboardPassword = async (currentPassword, newPassword) => {
+    try {
+      const docRef = doc(db, "dashboardPassword", "main");
+      const docSnap = await getDoc(docRef);
+
+      if (!docSnap.exists()) {
+        return { success: false, message: "Dashboard password record not found." };
+      }
+
+      const stored = docSnap.data().password;
+
+      if (currentPassword !== stored) {
+        return { success: false, message: "Current dashboard password is incorrect." };
+      }
+
+      await updateDoc(docRef, { password: newPassword });
+      return { success: true, message: "Dashboard password updated successfully!" };
+    } catch (err) {
+      console.error("Change dashboard password error:", err);
+      return { success: false, message: "Failed to update dashboard password." };
+    }
+  };
+
+  // Keep old changePassword pointing to login password so nothing else breaks
+  const changePassword = changeLoginPassword;
 
   const forgotPassword = async (email) => {
     try {
@@ -85,15 +110,19 @@ export const AuthProvider = ({ children }) => {
   };
 
   return (
-    <AuthContext.Provider value={{
-      user,
-      loading,
-      login,
-      logout,
-      changePassword,
-      forgotPassword,
-      isAuthenticated: !!user,
-    }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        loading,
+        login,
+        logout,
+        changePassword,         // legacy alias → login password
+        changeLoginPassword,    // explicit login password
+        changeDashboardPassword,// Firestore dashboard password
+        forgotPassword,
+        isAuthenticated: !!user,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );
