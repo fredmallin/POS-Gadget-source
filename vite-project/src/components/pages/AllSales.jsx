@@ -49,11 +49,6 @@ export default function AllSales() {
     })
     .sort((a, b) => new Date(b.date) - new Date(a.date));
 
-  const totalRevenue = paidSales.reduce(
-    (sum, sale) => sum + (sale.total || 0),
-    0
-  );
-
   const formatItems = (items = []) =>
     items
       .map((item) => `${item.productName || 'Item'} (×${item.quantity || 0})`)
@@ -67,9 +62,6 @@ export default function AllSales() {
     <div className="allsales-container">
       <h1>All Sold Goods</h1>
       <p>View and search all completed sales</p>
-      <p>
-        <strong>Total Revenue: Ksh{totalRevenue.toFixed(2)}</strong>
-      </p>
 
       <input
         type="text"
