@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
+import { ThemeToggle } from '../components/ThemeToggle'; // adjust path if needed
 import '../index.css';
 import {
   LayoutDashboard,
@@ -107,22 +108,26 @@ export const DashboardLayout = ({ children, activeItem, onMenuItemClick }) => {
       {/* Main Content */}
       <div className="main-content">
         <header className="main-header">
-          <button
-            className="toggle-sidebar-btn"
-            onClick={() => setSidebarOpen(!sidebarOpen)}
-          >
-            {sidebarOpen ? <X /> : <Menu />}
-          </button>
+  <button
+    className="toggle-sidebar-btn"
+    onClick={() => setSidebarOpen(!sidebarOpen)}
+  >
+    {sidebarOpen ? <X /> : <Menu />}
+  </button>
 
-          <div className="date-display">
-            {new Date().toLocaleDateString('en-US', {
-              weekday: 'long',
-              year: 'numeric',
-              month: 'long',
-              day: 'numeric',
-            })}
-          </div>
-        </header>
+  <div className="header-right">
+    <div className="date-display">
+      {new Date().toLocaleDateString('en-US', {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+      })}
+    </div>
+    
+    <ThemeToggle /> {/* ← Added here */}
+  </div>
+</header>
 
         <main className="page-content">{children}</main>
       </div>

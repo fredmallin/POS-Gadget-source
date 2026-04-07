@@ -32,7 +32,7 @@ export const POSProvider = ({ children }) => {
 
   const [loading, setLoading] = useState(true);
 
-  const LOW_STOCK_THRESHOLD = 10;
+  const LOW_STOCK_THRESHOLD = 3;
 
   useEffect(() => {
     if (!user) {

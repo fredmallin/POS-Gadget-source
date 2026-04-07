@@ -274,7 +274,6 @@ export const ViewProducts = () => {
               <input
                 type="file"
                 accept="image/*"
-                capture="environment"
                 onChange={handleImageSelect}
                 style={{ width: '100%', marginBottom: '6px' }}
               />

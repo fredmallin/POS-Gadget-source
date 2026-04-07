@@ -152,7 +152,6 @@ export const AddProduct = () => {
               <input
                 type="file"
                 accept="image/*"
-                capture="environment"
                 onChange={handleImageSelect}
                 ref={fileInputRef}
               />
