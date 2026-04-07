@@ -1743,3 +1743,83 @@ label {
 .eye-icon:hover {
   color: #fff;
 }
+
+/* Styling for the Clear Sales button */
+.actions-grid button.danger {
+  background-color: #e53935; /* Matches the logout red */
+  color: white;
+  border: none;
+}
+
+.actions-grid button.danger:hover {
+  background-color: #d32f2f; /* Slightly darker on hover */
+  cursor: pointer;
+}
+
+/* Ensure the icon inside is also white */
+.actions-grid button.danger svg {
+  stroke: white;
+}
+
+
+.cart-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 0;
+  border-bottom: 1px solid #2d2d3f;
+}
+
+/* Individual Delete/Trash Button */
+.cart-controls button:last-child {
+  background: transparent;
+  color: #ef4444; /* Red color */
+  border: 1px solid #ef4444;
+  margin-left: 8px;
+  padding: 4px;
+}
+
+.cart-controls button:last-child:hover {
+  background: #ef4444;
+  color: white;
+}
+
+/* Bottom Action Buttons */
+.cart-section > button {
+  width: 100%;
+  padding: 12px;
+  margin-top: 10px;
+  border-radius: 8px;
+  border: none;
+  font-weight: bold;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+/* Checkout Button (Primary) */
+.cart-section > button:nth-of-type(1) {
+  background-color: #3b82f6; /* Blue */
+  color: white;
+}
+
+/* Clear Cart Button (Danger) */
+.cart-section > button:nth-of-type(2) {
+  background-color: #e53935; /* Red matching Logout */
+  color: white;
+}
+
+.cart-section button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Dropdown styling */
+.cart-section select {
+  width: 100%;
+  padding: 10px;
+  background: #2d2d3f;
+  color: white;
+  border: 1px solid #444;
+  border-radius: 8px;
+  margin: 15px 0 5px 0;
+}
