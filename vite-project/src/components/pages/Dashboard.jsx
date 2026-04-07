@@ -2,6 +2,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { usePOS } from '../../contexts/POSContext';
 import { useAuth } from '../../contexts/AuthContext';
 import '../../index.css';
+import { Eye, EyeOff } from 'lucide-react';
 import {
   DollarSign,
   ShoppingBag,
@@ -20,6 +21,7 @@ const Dashboard = ({ onNavigate }) => {
   const { user } = useAuth(); // user.email is what AuthContext provides
 
   const [authenticated, setAuthenticated] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [unlocking, setUnlocking] = useState(false);
@@ -40,6 +42,8 @@ const Dashboard = ({ onNavigate }) => {
     }
     setUnlocking(true);
     setError('');
+
+    
     try {
       const docRef = doc(db, 'dashboardPassword', 'main');
       const docSnap = await getDoc(docRef);
@@ -169,23 +173,35 @@ const Dashboard = ({ onNavigate }) => {
 
   // ── Lock screen ───────────────────────────────────────────────────────
   if (!authenticated) {
-    return (
-      <div className="dashboard-login">
-        <h2>Enter Dashboard Password</h2>
-        <input
-          type="password"
-          placeholder="Dashboard password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && handleUnlock()}
-        />
-        <button onClick={handleUnlock} disabled={unlocking}>
-          {unlocking ? 'Checking...' : 'Unlock'}
-        </button>
-        {error && <p className="error">{error}</p>}
-      </div>
-    );
-  }
+  return (
+    <div className="dashboard-login">
+      <h2>Enter Dashboard Password</h2>
+
+     <div className="password-wrapper">
+  <input
+    type={showPassword ? "text" : "password"}
+    placeholder="Dashboard password"
+    value={password}
+    onChange={(e) => setPassword(e.target.value)}
+    onKeyDown={(e) => e.key === 'Enter' && handleUnlock()}
+    className="password-input"
+  />
+
+  <span
+    onClick={() => setShowPassword(!showPassword)}
+    className="eye-icon"
+  >
+    {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+  </span>
+</div>
+      <button onClick={handleUnlock} disabled={unlocking}>
+        {unlocking ? 'Checking...' : 'Unlock'}
+      </button>
+
+      {error && <p className="error">{error}</p>}
+    </div>
+  );
+}
 
   // ── Dashboard ─────────────────────────────────────────────────────────
   return (

@@ -1716,3 +1716,30 @@ label {
     grid-template-columns: 1fr;
   }
 }
+
+.password-wrapper {
+  position: relative;
+  width: 100%;
+  max-width: 400px;
+}
+
+.password-input {
+  width: 100%;
+  padding: 12px 45px 12px 12px; /* space for eye */
+  border-radius: 8px;
+  border: 1px solid #ccc;
+  font-size: 16px;
+}
+
+.eye-icon {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  cursor: pointer;
+  color: #aaa;
+}
+
+.eye-icon:hover {
+  color: #fff;
+}
