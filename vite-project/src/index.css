@@ -1823,3 +1823,128 @@ label {
   border-radius: 8px;
   margin: 15px 0 5px 0;
 }
+
+/* Small delete icon */
+.delete-order-btn {
+  width: 30px;
+  height: 30px;
+  padding: 0;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  border: none;
+  border-radius: 6px;
+
+  background: #dc2626;
+  color: white;
+
+  cursor: pointer;
+}
+
+.delete-order-btn:hover {
+  background: #b91c1c;
+}
+
+/* =========================================================
+   PENDING ORDERS - MOBILE
+========================================================= */
+
+.pending-orders-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+/* Keep every item/action on its own straight row */
+.pending-orders-table th,
+.pending-orders-table td {
+  padding: 10px;
+  text-align: left;
+  vertical-align: middle;
+}
+
+/* Actions stay together */
+.pending-orders-table td:last-child {
+  white-space: nowrap;
+}
+
+/* Buttons stay on one line */
+.pending-orders-table .btn {
+  white-space: nowrap;
+}
+
+
+/* =========================================================
+   PHONE
+========================================================= */
+
+@media (max-width: 768px) {
+
+  /* Allow the table to scroll horizontally */
+  .pending-orders-page {
+    width: 100%;
+    overflow-x: hidden;
+  }
+
+  .pending-orders-table {
+    display: block;
+    width: 100%;
+    overflow-x: auto;
+    white-space: nowrap;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .pending-orders-table thead,
+  .pending-orders-table tbody {
+    width: max-content;
+  }
+
+  .pending-orders-table th,
+  .pending-orders-table td {
+    min-width: 100px;
+    padding: 9px 10px;
+    font-size: 13px;
+  }
+
+  /* Customer column */
+  .pending-orders-table th:first-child,
+  .pending-orders-table td:first-child {
+    min-width: 100px;
+  }
+
+  /* Item column */
+  .pending-orders-table th:nth-child(3),
+  .pending-orders-table td:nth-child(3) {
+    min-width: 130px;
+  }
+
+  /* Actions column */
+  .pending-orders-table th:last-child,
+  .pending-orders-table td:last-child {
+    min-width: 170px;
+  }
+
+  /* Keep Complete + Cancel beside each other */
+  .pending-orders-table td:last-child > div {
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center;
+    gap: 5px;
+    white-space: nowrap;
+  }
+
+  .pending-orders-table .btn {
+    display: inline-flex !important;
+    align-items: center;
+    justify-content: center;
+    white-space: nowrap;
+    padding: 6px 8px !important;
+    font-size: 11px !important;
+  }
+
+  /* Don't allow the item rows to wrap */
+  .pending-orders-table td {
+    white-space: nowrap;
+  }
+}
